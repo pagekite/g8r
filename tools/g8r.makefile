@@ -5,8 +5,8 @@
 # dependencies and update itself with whatever rules are necessary.
 #
 JINJATOOL_VARS = g8r
-JINJATOOL_ROOT ?= $(shell cd $$(find . -name template.md-jinja |head -1 |dirname -) && pwd)
-JINJATOOL ?= $(shell which jinjatool.py || echo /home/mailpile/www/jinja/jinjatool.py)
+JINJATOOL_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+JINJATOOL := $(abspath $(JINJATOOL_ROOT)/../tools)/jinjatool.py
 MP_RFC822 ?= $(shell find . -name template.md-jinja |head -1)
 
 MAKE = make JINJATOOL_ROOT=$(JINJATOOL_ROOT) JINJATOOL_VARS=$(JINJATOOL_VARS) JINJATOOL=$(JINJATOOL) MP_RFC822=$(MP_RFC822) \

@@ -24,7 +24,8 @@ import subprocess
 import time
 
 
-DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'automations.json')
+DEFAULT_CONFIG_FILE = os.path.normpath(
+  os.path.join(os.path.dirname(__file__), '..', 'tree', 'automations.json'))
 
 COMMON_WEBLOG_RE = re.compile(
   r'(?P<log_ip>[0-9a-fA-F\:\.]+) '

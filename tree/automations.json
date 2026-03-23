@@ -1,0 +1,52 @@
+{
+  "#00": "This is a comment. This file is an example. Modify before use!",
+
+  "max_run_hours": 0,
+  "sleep_seconds": 15,
+
+  "#01": "This defines a list of log files we watch for new lines.",
+  "#02": "Lines matching regexes in `log_events` trigger the named events.",
+  "log_files": ["/var/log/lighttpd/access.log"],
+  "log_events": [
+    ["/events/\\?cron_hourly=(?P<re_host>[A-Za-z0-9_-]+)",     "LIVE_HOST"],
+    ["/events/\\?git_update=\\S+",                             "GIT_UPDATE"],
+    ["/events/\\?site_update=(?P<re_domain>[A-Za-z0-9\\.-]+)", "SITE_UPDATE"]
+  ],
+
+  "#11": "These are regeps against: Weekday Month YYYY-MM-DD HHhMMmSSs",
+  "#12": "The granularity is once/minute (SS undefined), while the runner runs.",
+  "#13": "Spaces in the regexp are treated as match-anything wildcards",
+  "scheduled_events": {
+    "(Thur|Tue)sday 2[123]h": "BEER_EVENT"
+  },
+
+  "#21": "This section is used by update_variables.py.",
+  "#22": "Defines how variables propagate from one file to another.",
+  "#23": "Mostly version numbers changing, triggering deployments.",
+  "#24": "Pre-conditions will block updates e.g. if a canary is sad.",
+  "update_variables": [
+    {
+      "pre_conditions": {},
+      "read": ["/path/to/builds/files-manifest.json"],
+      "map": {
+        "manifest_tool1_latest": "tool1_version",
+        "manifest_tool2_latest": "tool2_version"
+      },
+      "write": ["/path/to/g8r/canaries/website*/g8r.json"],
+      "emit_events": ["REBUILD_CONFIGS"]
+    }
+  ],
+
+  "#91": "These are the automations themselves: names and shell commands.",
+  "#92": "They always run in the same order, at most one at a time.",
+  "#93": "Automations may output 'AUTOMATION: NAME' to STDOUT to trigger",
+  "#94": "further processing, e.g. updated variables trigginrg a rebuild.",
+  "automations": [
+    ["BEER_EVENT",      "/bin/echo", "ts"],
+    ["LIVE_HOST",       "/path/to/bin/seen-live", "re_host", "log_ip"],
+    ["GIT_UPDATE",      "/path/to/bin/update-git-repos.sh"],
+    ["SITE_UPDATE",     "/path/to/bin/update-site-content.sh", "re_domain"],
+    ["VARS_UPDATE",     "/path/to/g8r/tools/update_variables.py"],
+    ["REBUILD_SCRIPTS", "/path/to/g8r/tools/rebuild"]
+  ]
+}

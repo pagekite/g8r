@@ -1,0 +1,1 @@
+hosts-example.org/web-myhost-secret/03_install_caddy.jinja-sh: g8r.vars hosts-example.org/g8r.json

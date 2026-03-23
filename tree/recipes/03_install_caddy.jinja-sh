@@ -1,0 +1,77 @@
+#!/bin/bash
+#
+# Content version {{ g8r_static_sites_version|default("undefined.") }}
+#
+export THIS_SCRIPT_DONE=/root/g8r/logs/DONE.$(md5sum "$0" |cut -b1-32)
+if [ -e $THIS_SCRIPT_DONE ]; then
+  echo "Aborting, this script, this version, already ran."
+  exit 0
+fi
+
+cd /
+export LC_ALL=C
+export LANG=C
+set -x
+set -e
+
+
+#############################################################################
+# Install caddy as a static file server and reverse proxy
+#
+apt-get install caddy
+
+
+#############################################################################
+# Prepare static sites
+#
+mkdir -p /var/lib/www-static/
+cd /var/lib/www-static/
+chmod ugo+rx,u+w,go-w .
+
+{% for site in g8r_all_domains %}{%- if site.static %}{% if site.domain %}
+{%- if site.reset %}
+rm -rf "{{ site.domain }}"
+{% endif %}
+if [ -d "{{ site.domain }}" ]; then
+    (cd "{{ site.domain }}" && git pull)
+else
+    git clone "{{ site.static }}" "{{ site.domain }}"
+fi
+{% endif %}{% endif %}{% endfor %}
+
+chmod go-rwx /var/lib/www-static/*/.git
+
+
+#############################################################################
+# Configure caddy
+#
+cat <<tac >/etc/caddy/Caddyfile
+{
+  email {{ g8r_email_admins }}
+  cert_issuer acme
+}
+
+{% for site in g8r_all_domains %}
+  {%- if site.redirect %}
+
+{% if not site.caddy_tls|default(0) %}http://{% endif %}{{ site.domain }} {
+   redir {{site.redirect}}
+}
+  {%- elif site.static %}
+{% if not site.caddy_tls|default(0) %}http://{% endif %}{{ site.domain }} {
+  log {
+    output file /var/log/caddy/access-{{ site.domain }}.log
+  }
+  handle_path /* {
+    root * /var/lib/www-static/{{ site.domain }}/
+    file_server
+  }
+}
+  {%- endif %}
+{% endfor %}
+tac
+systemctl reload caddy || systemctl start caddy
+
+
+touch $THIS_SCRIPT_DONE
+#EOF#

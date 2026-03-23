@@ -1,0 +1,4 @@
+tree/**/*.sh
+__pycache__
+*.pyc
+*~
