@@ -1,0 +1,47 @@
+#!/bin/bash
+export G8R_HOME=${G8R_HOME:-"$(cd $(dirname $0); pwd)"}
+export G8R_TOOLS="$G8R_HOME/tools"
+export G8R_TREE="$G8R_HOME/tree"
+
+case "$1" in
+
+    automate)
+        exec ${G8R_TOOLS}/automation_runner.py
+        ;;
+
+    make)
+        cd ${G8R_HOME}/tree
+        exec make
+        ;;
+
+    init)
+        exec ${G8R_TOOLS}/init.sh
+        ;;
+
+    ls)
+        cd ${G8R_HOME}/tree 2>/dev/null && ls -1 *.sh 2>/dev/null || {
+            echo "No g8r scripts installed" >&2
+            exit 1
+        }
+        ;;
+
+    run)
+        echo "FIXME" && exit 1
+        ;;
+
+    *)
+        cat <<tac && exit 1
+Usage: g8r <command> [...]
+
+Commands:
+    automate  Run automations defined in \$G8R_HOME/tree/automations.json
+    ls        List available scripts
+    run X     Run script X
+
+Governator Server Commands:
+    init      Peform basic setup of the Governator Server
+    make      Rebuild scripts by running make in \$G8R_HOME/tree
+
+G8R_HOME = $G8R_HOME
+tac
+esac

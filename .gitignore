@@ -1,4 +1,6 @@
 tree/**/*.sh
 __pycache__
+.depend
+.depend.up
 *.pyc
 *~

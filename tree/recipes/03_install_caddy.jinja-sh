@@ -47,7 +47,7 @@ chmod go-rwx /var/lib/www-static/*/.git
 #
 cat <<tac >/etc/caddy/Caddyfile
 {
-  email {{ g8r_email_admins }}
+  email {{ g8r_admin_email }}
   cert_issuer acme
 }
 

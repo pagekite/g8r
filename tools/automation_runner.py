@@ -24,8 +24,8 @@ import subprocess
 import time
 
 
-DEFAULT_CONFIG_FILE = os.path.normpath(
-  os.path.join(os.path.dirname(__file__), '..', 'tree', 'automations.json'))
+DEFAULT_CONFIG_FILE = 'automations.json'
+DEFAULT_G8R_HOME = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'tree'))
 
 COMMON_WEBLOG_RE = re.compile(
   r'(?P<log_ip>[0-9a-fA-F\:\.]+) '
@@ -41,7 +41,11 @@ COMMON_WEBLOG_RE = re.compile(
 
 class AutomationRunner:
     def __init__(self, path_to_config):
-        self.path_to_config = path_to_config or DEFAULT_CONFIG_FILE
+        if not path_to_config:
+            g8r_home = os.getenv('G8R_HOME') or DEFAULT_G8R_HOME
+            path_to_config = os.path.join(g8r_home, 'tree', DEFAULT_CONFIG_FILE)
+        self.path_to_config = path_to_config
+
         self.sleep_seconds = 10
         self.log_files = []
         self.log_positions = {}
