@@ -61,6 +61,41 @@ Hope that's OK.
 ##############################################################################
 tac
 
+echo -e '\n** Checking dependencies ...\n' >&2
+MISSING=0
+mcheck() {
+    what=$1
+    ok=$2
+    if [ "$ok" = "" ]; then
+        echo -e "\t${what}\tMISSING" >&2
+        let MISSING=$MISSING+1
+    else
+        echo -e "\t${what}\tok" >&2
+    fi
+}
+mcheck "make             " "$(which make)"
+mcheck "python3          " "$(which python3)"
+mcheck "python-jinja2    " "$(python3 -c 'import jinja2; print("ok")' 2>/dev/null)"
+mcheck "python-markdown  " "$(python3 -c 'import markdown; print("ok")' 2>/dev/null)"
+for t in \
+       "jinjatool        " \
+       "automation_runner" \
+       "update_variables " \
+; do
+    mcheck "$t" $(cd tools; python3 -c "import $t; print('ok')")
+done
+
+if [ $MISSING -gt 0 ]; then
+    echo -e '\nUh, oh. Please fix that and retry!' >&2
+    exit 1
+else
+    echo -e '\n** Dependencies look good, off we go!' >&2
+fi
+
+
+##############################################################################
+
+
 ask() {
     q=$1
     v=$2
@@ -151,6 +186,7 @@ tac
     fi
 fi
 
+
 # Create hosts-$DOMAIN in tree
 echo >&2
 g8r_hosts_dir="tree/hosts-${g8r_governating_domain}"
@@ -159,6 +195,7 @@ touch "${g8r_hosts_dir}/g8r.vars"
 echo "** Created \$G8R_HOME/${g8r_hosts_dir}" >&2
 
 
+# Create the symbolic link for exposing things to the web
 echo >&2
 g8r_web_symlink="${g8r_init_static_path}/g8r-${g8r_governating_domain}"
 if [ -d "$g8r_web_symlink" ]; then
