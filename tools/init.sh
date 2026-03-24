@@ -39,7 +39,7 @@ save() {
 g8r_governating_domain=${g8r_governating_domain}
 g8r_governator_hostname=${g8r_governator_hostname}
 g8r_admin_email=${g8r_admin_email}
-g8r_url_base=https://${g8r_governator_hostname}/g8r
+g8r_url_base=https://${g8r_governator_hostname}/g8r-${g8r_governating_domain}
 
 g8r_init_have_webserver=${g8r_init_have_webserver}
 g8r_init_static_path=${g8r_init_static_path}
@@ -211,8 +211,7 @@ fi
 # Create hosts-$DOMAIN in tree
 echo >&2
 g8r_hosts_dir="tree/hosts-${g8r_governating_domain}"
-mkdir -p "${g8r_hosts_dir}"
-touch "${g8r_hosts_dir}/g8r.vars"
+[ -d "${g8r_hosts_dir}" ] || $G8R_TOOLS/add-domain.sh ${g8r_governating_domain} 2>/dev/null
 echo "** Created \$G8R_HOME/${g8r_hosts_dir}" >&2
 
 

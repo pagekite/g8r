@@ -1,0 +1,162 @@
+#!/bin/bash
+#
+cd /
+export G8R_HOSTS_URL="{{ g8r_url_base }}/hosts/"
+export G8R_PING_URL="{{ g8r_url_base }}/events/"
+export HOST_FQDN="{{ host_name }}.{{ host_domain }}"
+export LC_ALL=C
+export LANG=C
+set -x
+set -e
+
+
+#############################################################################
+# Set hostname, timezone
+#
+hostname $HOST_FQDN
+echo "$HOST_FQDN" >/etc/hostname
+echo '{{ pk_service_timezone }}' >/etc/timezone
+
+
+#############################################################################
+# Add our SSH keys
+#
+mkdir -p /root/.ssh
+cat <<tac |grep ssh >>/root/.ssh/authorized_keys
+{{ cat('~/.ssh/id_ed25519.pub') }}
+tac
+chmod go-rwx /root/.ssh /root/.ssh/authorized_keys
+
+
+{% if g8r_sshd_port|default(0) -%}
+#############################################################################
+# Reconfigure SSHD to listen on Port {{ g8r_sshd_port }} + hardening
+#
+SC=/etc/ssh/sshd_config
+if [ $(grep -c '^Port {{ g8r_sshd_port }}' $SC) -lt 1 ]; then
+    perl -i -pe 's/^(Port|PermitRootLogin|RSAAuth|PubkeyAuth)/#\1/' $SC
+    cat <<tac >>$SC
+##[ Customizations by Governator ]##########################################
+#
+Port {{ g8r_sshd_port }}
+PermitRootLogin without-password
+RSAAuthentication yes
+PubkeyAuthentication yes
+#
+tac
+    systemctl enable ssh
+    systemctl reload ssh
+fi 
+{%- else %}# g8r_sshd_port undefined, no change to sshd_config{% endif %}
+
+
+{% if g8r_always_install|default(0) -%}
+#############################################################################
+# Install things we always want
+#
+cat <<tac >/etc/apt/apt.conf.d/10_confdef
+DPkg::Options {
+   "--force-confdef";
+   "--force-confold";
+}
+tac
+apt-get update
+apt-get upgrade -y
+apt-get install -y {{ g8r_always_install }}
+{%- else %}# g8r_always_install undefined, nothing installed{% endif %}
+
+
+{% if g8r_always_enable|default(0) -%}
+#############################################################################
+# Enable services we always want
+#
+systemctl enable {{ g8r_always_enable }}
+systemctl start {{ g8r_always_enable }}
+{%- else %}# g8r_always_enable undefined, nothing started/enabled{% endif %}
+
+
+{% if g8r_custom_resolver|default(0) -%}
+#############################################################################
+# Reconfigure /etc/resolv.conf to use our preferred resolver, falling back
+# to Google's 8.8.8.8 if it is unresponsive.
+#
+chattr -i /etc/resolv.conf || true
+cat <<tac >/etc/resolv.conf
+nameserver {{ g8r_custom_resolver }}
+nameserver 8.8.8.8
+tac
+chattr +i /etc/resolv.conf  # Mark immutable, so DHCP doesn't overwrite
+{%- else %}# g8r_custom_resolver undefined, /etc/resolv.conf unchanged{% endif %}
+
+
+#############################################################################
+# If we have backups for this host, download and extract them first.
+# The rest of bootstrap may overwrite some of the contents if it clashes.
+#
+curl -s "{{ g8r_url_base }}/files/backups/{{ host_g8r_secret }}.tar.xz" \
+     -o /root/bootstrap.tar.xz || rm -vf /root/bootstrap.tar.xz
+(
+    if [ -e /root/bootstrap.tar.xz ]; then
+        cd /
+        tar xvfJ /root/bootstrap.tar.xz || true
+        rm -f /root/bootstrap.tar.xz
+    fi
+)
+
+
+#############################################################################
+# Create g8r tool, logs
+#
+cat <<tac >/bin/g8r
+#!/bin/bash
+cd /root/g8r
+export WS_TS=\$(date +%Y%d%mT%H%M%S)
+export WS_SCRIPT="\${1:-unknown}"
+shift
+[ -e "\${WS_SCRIPT}" ] || {
+    echo "No such script: \$WS_SCRIPT"
+    exit 1
+}
+(
+    cp -va \${WS_SCRIPT} logs/\${WS_TS}-\${WS_SCRIPT}
+    bash logs/\${WS_TS}-\${WS_SCRIPT} "\$@"
+)\
+    2>&1 |tee logs/\${WS_TS}-\${WS_SCRIPT}.log
+tac
+chmod u+rwx,go-rw /bin/g8r /root/g8r
+
+
+#############################################################################
+{%- set cron_hash = host_g8r_secret|hash|truncate(4, end='') %}
+{%- set cron_hour = (cron_hash|int(16)) % 49 + 10 %}
+# Create g8r hourly cron job (0x{{ cron_hash }} => hh:{{ cron_hour }})
+#
+cat <<tac >/etc/cron.d/g8r-hourly
+# This runs our scheduled hourly jobs. The minute they run at is chosen
+# at bootstrap time, in a stable-yet-unpredictable (hashed) way, to prevent
+# too many hosts from running their jobs at the exact same time.
+#
+{{ cron_hour }} * * * * root /bin/g8r 10_hourly-cron.sh >/dev/null
+tac
+systemctl restart cron || true
+
+
+#############################################################################
+# Bootstrap the mirroring process
+#
+curl -s "$G8R_HOSTS_URL/{{ host_g8r_secret }}/20_update-rules.sh" \
+    |bash
+mkdir -p /root/g8r/logs
+cd /root/g8r
+for script in 0*.sh; do
+    /bin/g8r $script
+done
+
+
+#############################################################################
+# If we get this far, report happiness!
+#
+curl -s "$G8R_PING_URL?bootstrapped={{ host_g8r_secret }}&serial={{ pk_service_serial }}"
+
+
+# EOF serial={{ pk_service_serial }}

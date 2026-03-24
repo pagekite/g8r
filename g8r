@@ -10,12 +10,23 @@ case "$1" in
         ;;
 
     make)
+        shift
         cd ${G8R_HOME}/tree
-        exec make
+        exec make "$@"
         ;;
 
     init)
         exec ${G8R_TOOLS}/init.sh
+        ;;
+
+    add-domain)
+        shift
+        exec ${G8R_TOOLS}/add-domain.sh "$@"
+        ;;
+
+    add-host)
+        shift
+        exec ${G8R_TOOLS}/add-host.sh "$@"
         ;;
 
     ls)
@@ -34,16 +45,19 @@ case "$1" in
 Usage: g8r <command> [...]
 
 This is the Governator! It will curl|bash your servers into shape.
+
 See https://github.com/pagekite/g8r for docs and details.
 
 Governator Server Commands:
-    init      Peform basic setup of the Governator Server
-    make      Rebuild scripts by running make in \$G8R_HOME/tree
+    init       Peform basic setup of the Governator Server
+    make       Rebuild scripts by running make in \$G8R_HOME/tree
+    add-domain Add a new domain (run w/o args for help)
+    add-host   Add a new host (run w/o args for help)
 
 Commands:
-    automate  Run automations defined in \$G8R_HOME/tree/automations.json
-    ls        List available scripts
-    run X     Run script X
+    automate   Run automations defined in \$G8R_HOME/tree/automations.json
+    ls         List available scripts
+    run X      Run script X
 
 G8R_HOME = $G8R_HOME
 tac

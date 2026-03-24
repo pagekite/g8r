@@ -60,13 +60,19 @@ class VaryVariables:
 
     def gather(self, rule):
         found = {}
+        def _merge(dst, src, k):
+            if isinstance(src[k], dict) and k in dst:
+                for k2 in src[k]:
+                    _merge(dst[k], src[k], k2)
+            else:
+                dst[k] = src[k]
         for fn in self.glob_filenames(rule['read']):
             try:
                 with open(fn, 'r') as fd:
                     data = json.loads(fd.read())
                     for vn in rule['map']:
                         if vn in data:
-                            found[vn] = data[vn]
+                            _merge(found, data, vn)
                         self.stdout('In %s: %s=%s' % (fn, vn, data[vn]))
             except Exception as e:
                 self.stderr('%s: When reading %s: %s' % (type(e).__name__, fn, e))
