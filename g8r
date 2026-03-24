@@ -33,14 +33,17 @@ case "$1" in
         cat <<tac && exit 1
 Usage: g8r <command> [...]
 
-Commands:
-    automate  Run automations defined in \$G8R_HOME/tree/automations.json
-    ls        List available scripts
-    run X     Run script X
+This is the Governator! It will curl|bash your servers into shape.
+See https://github.com/pagekite/g8r for docs and details.
 
 Governator Server Commands:
     init      Peform basic setup of the Governator Server
     make      Rebuild scripts by running make in \$G8R_HOME/tree
+
+Commands:
+    automate  Run automations defined in \$G8R_HOME/tree/automations.json
+    ls        List available scripts
+    run X     Run script X
 
 G8R_HOME = $G8R_HOME
 tac
