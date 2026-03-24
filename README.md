@@ -1,6 +1,6 @@
 # Governator - g8r
 
-curl|bash your servers into shape
+curl|bash your servers into shape!
 
 
 ## What's this?
@@ -67,9 +67,13 @@ The tool will ask the following questions:
 
    1. What is the domain name for the hosts you are administering?
    2. Do you already have a running web server for static content?
-      3a. If no, do you mind if I set up Caddy?
-      3b. If yes, please provide a path to static content.
-   4. What is the public DNS domain name of this host?
+   3. Where does your webserver read static content from? (A path)
+   4. What e-mail address will you use for server-admin related mail?
+   5. What is the public DNS domain name of this host?
+   6. Create /usr/bin/$g8r_helper helper?
+
+If you would rather configure things by hand,
+the source of `tools/init.sh` should be relatively easy to read.
 
 **Note:** If you don't have a public IP address and DNS name,
 or just want to run this off a laptop or other personal computer,
