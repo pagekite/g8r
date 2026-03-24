@@ -1,14 +1,19 @@
 #!/bin/bash
 #
-# Ask these questions:
+# Checks dependencies.
+# Asks these questions:
 #
 #   1. What is the domain name for the hosts you are administering?
 #   2. Do you already have a running web server for static content?
-#   3a. If no, do you mind if I set up Caddy?
-#   3b. If yes, please provide a path to static content.
+#   3. Where does your webserver read static content from? (A path)
 #   4. What e-mail address will you use for server-admin related mail?
 #   5. What is the public DNS domain name of this host?
 #   6. Create /usr/bin/$g8r_helper helper?
+#
+# Create git branch
+# Create /usr/bin/$g8r_helper
+# Create .../tree/hosts-domain/
+# Configure the static web-server
 #
 export G8R_HOME=${G8R_HOME:-"$(cd $(dirname $0)/..; pwd)"}
 export G8R_TOOLS="$G8R_HOME/tools"
@@ -22,7 +27,6 @@ g8r_governating_domain=example.org
 g8r_governator_hostname=g8r.example.org
 g8r_admin_email=root@example.org
 g8r_init_have_webserver=N
-g8r_init_install_caddy=N
 g8r_init_static_path=/var/www/html
 
 # Load any previous progress...
@@ -38,7 +42,6 @@ g8r_admin_email=${g8r_admin_email}
 g8r_url_base=https://${g8r_governator_hostname}/g8r
 
 g8r_init_have_webserver=${g8r_init_have_webserver}
-g8r_init_install_caddy=${g8r_init_install_caddy}
 g8r_init_static_path=${g8r_init_static_path}
 tac
 }
@@ -135,13 +138,26 @@ g8r_init_have_webserver=$(ask \
     '2. Do you already have a running web server for static content?' \
     g8r_init_have_webserver $g8r_init_have_webserver ${g8r_init_have_webserver:-y/N})
 
-[ "$g8r_init_have_webserver" = "N" ] && \
-  g8r_init_install_caddy=$(ask \
-    '3. Shall I install Caddy for you?' \
-    g8r_init_install_caddy $g8r_init_install_caddy ${g8r_init_install_caddy:-y/N})
+if [ "$g8r_init_have_webserver" = "N" ]; then
+    cat <<tac >&1
 
-[ "$g8r_init_have_webserver" = "Y" ] && \
-  g8r_init_static_path=$(ask \
+##############################################################################
+
+You're going to need a webserver:
+
+   * Which is HTTPS enabled
+   * Which is reachable from the public Internet
+   * Which is configured to serve static files and follow symbolic links
+
+We recommand Caddy: https://caddyserver.com/
+
+Also, Pagekite if you want to run locally: https://pagekite.net/
+
+tac
+    exit 1
+fi
+
+g8r_init_static_path=$(ask \
     '3. Where does your webserver read static content from? (A path)' \
     g8r_init_static_path $g8r_init_static_path)
 
@@ -171,10 +187,10 @@ git checkout "${g8r_governating_domain}" >/dev/null || exit 1
 g8r_helper=g8r-${g8r_governating_domain}
 if [ -x "/usr/bin/$g8r_helper" ]; then
     echo >&2
-    echo "5. Already exists: /usr/bin/$g8r_helper" >&2
+    echo "6. Already exists: /usr/bin/$g8r_helper" >&2
 else
     g8r_create_helper=$(ask \
-        "5. Create /usr/bin/$g8r_helper helper?" g8r_create_helper Y Y/n)
+        "6. Create /usr/bin/$g8r_helper helper?" g8r_create_helper Y Y/n)
     if [ "$g8r_create_helper" = "Y" ]; then
         cat <<tac >g8r-helper.tmp
 #!/bin/sh
