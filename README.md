@@ -73,7 +73,7 @@ The tool will ask the following questions:
    6. Create /usr/bin/$g8r_helper helper?
 
 If you would rather configure things by hand,
-the source of `tools/init.sh` should be relatively easy to read.
+the source of [tools/init.sh](tools/init.sh) should be relatively easy to read.
 
 **Note:** If you don't have a public IP address and DNS name,
 or just want to run this off a laptop or other personal computer,
