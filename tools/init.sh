@@ -58,10 +58,13 @@ the script later. Your progress won't be lost.
 Looks like your G8R_HOME is: ${G8R_HOME}
 Hope that's OK.
 
+Press ENTER to continue.
+
 ##############################################################################
 tac
+read
 
-echo -e '\n** Checking dependencies ...\n' >&2
+echo -e '** Checking dependencies ...\n' >&2
 MISSING=0
 mcheck() {
     what=$1
@@ -75,16 +78,18 @@ mcheck() {
 }
 mcheck "make             " "$(which make)"
 mcheck "python3          " "$(which python3)"
-mcheck "python-jinja2    " "$(python3 -c 'import jinja2; print("ok")' 2>/dev/null)"
-mcheck "python-markdown  " "$(python3 -c 'import markdown; print("ok")' 2>/dev/null)"
-for t in \
+mcheck "python: jinja2   " "$(python3 -c 'import jinja2; print("ok")' 2>/dev/null)"
+mcheck "python: markdown " "$(python3 -c 'import markdown; print("ok")' 2>/dev/null)"
+mcheck "python: yaml     " "$(python3 -c 'import yaml; print("ok")' 2>/dev/null)"
+if [ $MISSING = 0 ]; then
+    for t in \
        "jinjatool        " \
        "automation_runner" \
        "update_variables " \
-; do
-    mcheck "$t" $(cd tools; python3 -c "import $t; print('ok')")
-done
-
+    ; do
+        mcheck "$t" $(cd tools; python3 -c "import $t; print('ok')")
+    done
+fi
 if [ $MISSING -gt 0 ]; then
     echo -e '\nUh, oh. Please fix that and retry!' >&2
     exit 1
