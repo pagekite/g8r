@@ -11,6 +11,7 @@ case "$1" in
 
     make)
         shift
+        ${G8R_TOOLS}/update_variables.py
         cd ${G8R_HOME}/tree
         exec make "$@"
         ;;

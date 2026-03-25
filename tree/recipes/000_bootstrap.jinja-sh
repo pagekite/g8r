@@ -50,7 +50,6 @@ fi
 {%- else %}# g8r_sshd_port undefined, no change to sshd_config{% endif %}
 
 
-{% if g8r_always_install|default(0) -%}
 #############################################################################
 # Install things we always want
 #
@@ -62,17 +61,17 @@ DPkg::Options {
 tac
 apt-get update
 apt-get upgrade -y
-apt-get install -y {{ g8r_always_install }}
-{%- else %}# g8r_always_install undefined, nothing installed{% endif %}
+apt-get install -y {{ g8r_always_install|default('python3') }} \
+    sudo build-essential make less screen vim git jq findutils xz-utils \
+    traceroute dnsutils net-tools psmisc e2fsprogs tar rsync curl wget \
+    openntpd python3-jinja2 python3-yaml python3-markdown
 
 
-{% if g8r_always_enable|default(0) -%}
 #############################################################################
 # Enable services we always want
 #
-systemctl enable {{ g8r_always_enable }}
-systemctl start {{ g8r_always_enable }}
-{%- else %}# g8r_always_enable undefined, nothing started/enabled{% endif %}
+systemctl enable openntpd {{ g8r_always_enable|default('') }}
+systemctl start openntpd {{ g8r_always_enable|default('') }}
 
 
 {% if g8r_custom_resolver|default(0) -%}

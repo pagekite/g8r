@@ -1,11 +1,27 @@
 #!/usr/bin/env python3
 #
 # This process runs on demand, updating variable definitions in JSON files
-# found under `config/`, depending on rules defined in `automations.json`.
+# found under `tree/`, depending on rules defined in `tree/automations.json`.
+#
+# When an update rule is applied, variables (values) are first gathered from
+# one or more JSON files (using shell globbing rules to select input files),
+# renamed as necessary and then written to another set of JSON files (again,
+# globbing).
+#
+# Use cases:
+#   - Pick up new version numbers from a manifest and update canary configs
+#   - Pick up stable version numbers from canary configs and apply globally
+#   - Gather per-host IP addresses and generate a unified inventory
 #
 # This script is invoked as necessary by `automation-runner.py`. Depending
 # on the configuration (and whether anything changed), it may emit events
 # which then trigger further processing.
+#
+# TODO:
+#   - Implement preconditions (needed for canary->stable versioning)
+#   - Implement sanity checks so we don't blow away something important
+#   - Allow mapping rules to define paths to nested variables, not just
+#     the top level
 #
 
 import datetime
