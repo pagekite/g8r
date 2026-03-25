@@ -34,6 +34,16 @@
       },
       "write": ["/path/to/g8r/canaries/website*/g8r.json"],
       "emit_events": ["REBUILD_CONFIGS"]
+    },
+    {
+      "pre_conditions": {},
+      "group_by": ["tree/hosts-*"],
+      "read": ["$GROUP/*/host.json"],
+      "map": {
+        "g8r_hosts": "g8r_hosts"
+      },
+      "write": ["$GROUP/g8r.json"],
+      "emit_events": ["REBUILD_CONFIGS"]
     }
   ],
 

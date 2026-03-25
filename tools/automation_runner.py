@@ -25,7 +25,7 @@ import time
 
 
 DEFAULT_CONFIG_FILE = 'automations.json'
-DEFAULT_G8R_HOME = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'tree'))
+DEFAULT_G8R_HOME = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
 
 COMMON_WEBLOG_RE = re.compile(
   r'(?P<log_ip>[0-9a-fA-F\:\.]+) '

@@ -12,10 +12,11 @@ import datetime
 import glob
 import json
 import os
+import time
 
 
 DEFAULT_CONFIG_FILE = 'automations.json'
-DEFAULT_G8R_HOME = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'tree'))
+DEFAULT_G8R_HOME = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
 
 
 class VaryVariables:
@@ -53,12 +54,23 @@ class VaryVariables:
     def check_preconditions(self, rule):
         return True  # FIXME
 
-    def glob_filenames(self, filespecs):
-        for filespec in filespecs:
-            for fn in glob.glob(filespec):
+    def glob_filenames(self, filespecs, group=None):
+        for filespec in sorted(filespecs):
+            if group:
+                filespec = filespec.replace('$GROUP', group)
+            for fn in sorted(glob.glob(filespec)):
                 yield fn
 
-    def gather(self, rule):
+    def groups(self, rule):
+        yielded = 0
+        if rule.get('group_by'):
+            for fn in self.glob_filenames(rule['group_by']):
+                yielded += 1
+                yield fn
+        if not yielded:
+            yield None
+
+    def gather(self, rule, group):
         found = {}
         def _merge(dst, src, k):
             if isinstance(src[k], dict) and k in dst:
@@ -66,7 +78,7 @@ class VaryVariables:
                     _merge(dst[k], src[k], k2)
             else:
                 dst[k] = src[k]
-        for fn in self.glob_filenames(rule['read']):
+        for fn in self.glob_filenames(rule['read'], group):
             try:
                 with open(fn, 'r') as fd:
                     data = json.loads(fd.read())
@@ -78,14 +90,16 @@ class VaryVariables:
                 self.stderr('%s: When reading %s: %s' % (type(e).__name__, fn, e))
         return found
 
-    def update(self, rule, inputs):
+    def update(self, rule, group, inputs):
         changed = []
-        for fn in self.glob_filenames(rule['write']):
+        for fn in self.glob_filenames(rule['write'], group):
             try:
                 with open(fn, 'r') as fd:
                     data = json.loads(fd.read())
                 changing = False
-                for iv, ov in rule['map'].items():
+                for iv, ov in sorted(list(rule['map'].items())):
+                    if iv not in inputs:
+                        continue
                     if data.get(ov) != inputs[iv]:
                         data[ov] = inputs[iv]
                         changing = True
@@ -102,9 +116,10 @@ class VaryVariables:
         for rule in self.rules:
             self.stdout('Checking rule: %s' % (rule['map']))
             if self.check_preconditions(rule):
-                if self.update(rule, self.gather(rule)):
-                    for auto_event in rule['emit_events']:
-                        self.stdout('AUTOMATION: %s' % auto_event)
+                for group in self.groups(rule):
+                    if self.update(rule, group, self.gather(rule, group)):
+                        for auto_event in rule['emit_events']:
+                            self.stdout('AUTOMATION: %s' % auto_event)
 
 
 if __name__ == '__main__':
