@@ -2,6 +2,7 @@
 #
 cd /
 export G8R_HOSTS_URL="{{ g8r_url_base }}/hosts/"
+export G8R_FILES_URL="{{ g8r_url_base }}/files/"
 export G8R_PING_URL="{{ g8r_url_base }}/events/"
 export HOST_FQDN="{{ host_name }}.{{ host_domain }}"
 export LC_ALL=C
@@ -106,6 +107,17 @@ curl -s "{{ g8r_url_base }}/files/backups/{{ host_g8r_secret }}.tar.xz" \
 #############################################################################
 # Create g8r tool, logs
 #
+mkdir -p /var/lib/g8r
+cd /var/lib/g8r
+curl -s "$G8R_FILES_URL/g8r-tools.tar.gz" |tar xvfz -
+ln -fs /var/lib/g8r /root/g8r-home
+cat <<tac >/bin/g8r
+#!/bin/bash
+exec /var/lib/g8r/g8r "$@"
+tac
+chmod u+rwx,go-rw /bin/g8r
+
+
 cat <<tac >/bin/g8r
 #!/bin/bash
 cd /root/g8r
@@ -135,7 +147,7 @@ cat <<tac >/etc/cron.d/g8r-hourly
 # at bootstrap time, in a stable-yet-unpredictable (hashed) way, to prevent
 # too many hosts from running their jobs at the exact same time.
 #
-{{ cron_hour }} * * * * root /bin/g8r 10_hourly-cron.sh >/dev/null
+{{ cron_hour }} * * * * root /bin/g8r run 090_hourly-cron.sh >/dev/null
 tac
 systemctl restart cron || true
 
@@ -155,7 +167,8 @@ done
 #############################################################################
 # If we get this far, report happiness!
 #
-curl -s "$G8R_PING_URL?bootstrapped={{ host_g8r_secret }}&serial={{ pk_service_serial }}"
+{% set builddate = 'now'|date('+%Y%m%dT%H%M%S') -%}
+curl -s "$G8R_PING_URL?bootstrapped={{ host_g8r_secret }}&vts={{ builddate }}"
 
 
-# EOF serial={{ pk_service_serial }}
+# EOF builddate={{ builddate }}

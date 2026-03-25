@@ -1,3 +1,8 @@
 {
-    "g8r_hosts": {}
+  "g8r_hosts": {
+    "myhost": {
+      "ipv4": "1.2.3.6",
+      "ipv6": "abcd::1"
+    }
+  }
 }
