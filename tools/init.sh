@@ -97,7 +97,7 @@ if [ $MISSING -gt 0 ]; then
     echo -e '\nUh, oh. Please fix that and retry!' >&2
     exit 1
 else
-    echo -e '\n** Dependencies look good, off we go!' >&2
+    echo -e '\n** OK: Dependencies look good, off we go!' >&2
 fi
 
 
@@ -212,22 +212,41 @@ fi
 echo >&2
 g8r_hosts_dir="tree/hosts-${g8r_governating_domain}"
 [ -d "${g8r_hosts_dir}" ] || $G8R_TOOLS/add-domain.sh ${g8r_governating_domain} 2>/dev/null
-echo "** Created \$G8R_HOME/${g8r_hosts_dir}" >&2
+echo "** OK: Created \$G8R_HOME/${g8r_hosts_dir}" >&2
+
+
+# Create g8r-tools bundle in exposed/files
+echo >&2
+tar cfz exposed/files/g8r-tools.tar.gz g8r tools/*.py
+echo "** OK: Created: $(ls -1hs exposed/files/g8r-tools.tar.gz)" >&2
 
 
 # Create the symbolic link for exposing things to the web
 echo >&2
 g8r_web_symlink="${g8r_init_static_path}/g8r-${g8r_governating_domain}"
 if [ -d "$g8r_web_symlink" ]; then
-    echo "** Already exists: $g8r_web_symlink" >&2
+    echo "** OK: Already exists: $g8r_web_symlink" >&2
 else
     if [ -d "${g8r_init_static_path}" ]; then
         echo "** Creating: $g8r_web_symlink" >&2
         sudo ln -s "$G8R_HOME/exposed" "$g8r_web_symlink"
     else
-        echo "!! Not found! ${g8r_init_static_path}" >&2
+        echo "!! ERROR: Not found: ${g8r_init_static_path}" >&2
         exit 1
     fi
+fi
+
+# Test it...
+TEST_FOR="$(date +%s).$$"
+echo "$TEST_FOR" >"$G8R_HOME/exposed/check.txt"
+TEST_GOT="$(curl -s ${g8r_url_base}/check.txt)"
+if [ ! "$TEST_FOR" = "$TEST_GOT" ]; then
+    echo "!! ERROR: curl test failed for: ${g8r_url_base}/check.txt" >&2
+    echo "   ${TEST_FOR} != ${TEST_GOT}"
+    exit 2
+else
+    echo "** OK: curl test passed for: ${g8r_url_base}" >&2
+    rm -f "$G8R_HOME/exposed/check.txt"
 fi
 
 

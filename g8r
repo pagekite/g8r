@@ -3,14 +3,15 @@ export G8R_HOME=${G8R_HOME:-"$(cd $(dirname $0); pwd)"}
 export G8R_TOOLS="$G8R_HOME/tools"
 export G8R_TREE="$G8R_HOME/tree"
 
-case "$1" in
+COMMAND="$1"
+shift
+case "$COMMAND" in
 
     automate)
         exec ${G8R_TOOLS}/automation_runner.py
         ;;
 
     make)
-        shift
         ${G8R_TOOLS}/update_variables.py
         cd ${G8R_HOME}/tree
         exec make "$@"
@@ -21,40 +22,61 @@ case "$1" in
         ;;
 
     add-domain)
-        shift
         exec ${G8R_TOOLS}/add-domain.sh "$@"
         ;;
 
     add-host)
-        shift
         exec ${G8R_TOOLS}/add-host.sh "$@"
         ;;
 
     ls)
-        cd ${G8R_HOME}/tree 2>/dev/null && ls -1 *.sh 2>/dev/null || {
+        cd ${G8R_HOME}/scripts 2>/dev/null && ls -1 *.sh 2>/dev/null || {
             echo "No g8r scripts installed" >&2
             exit 1
         }
         ;;
 
     run)
-        echo "FIXME" && exit 1
+        G8R_SCRIPT="$1"
+        G8R_S_PATH="${G8R_HOME}/scripts/$G8R_SCRIPT"
+        shift
+        if [ -x "$G8R_S_PATH" ]; then
+            G8R_TS=$(date +%Y%d%mT%H%M%S)
+            cd "${G8R_HOME}"                            || exit 1
+            mkdir -p logs                               || exit 2
+            G8R_ARCHIVED=logs/"${G8R_TS}-${G8R_SCRIPT}"
+            (
+                cp -va "$G8R_S_PATH" "${G8R_ARCHIVED}"
+                bash "${G8R_ARCHIVED}" "$@"
+            )\
+                2>&1 |tee logs/"${G8R_TS}-${G8R_SCRIPT}.log"
+        else
+            echo "Not found: $S_PATH" >&2
+            exit 1
+        fi
         ;;
 
     *)
-        cat <<tac && exit 1
+        cat <<tac
 Usage: g8r <command> [...]
 
 This is the Governator! It will curl|bash your servers into shape.
 
 See https://github.com/pagekite/g8r for docs and details.
 
+tac
+        if [ -e "$G8R_HOME/tools/add-domain.sh" ]; then
+            cat <<tac
 Governator Server Commands:
+    automate   Run automations defined in \$G8R_HOME/tree/automations.json
     init       Peform basic setup of the Governator Server
     make       Rebuild scripts by running make in \$G8R_HOME/tree
     add-domain Add a new domain (run w/o args for help)
     add-host   Add a new host (run w/o args for help)
 
+tac
+        else
+            cat <<tac
 Commands:
     automate   Run automations defined in \$G8R_HOME/tree/automations.json
     ls         List available scripts
@@ -62,4 +84,6 @@ Commands:
 
 G8R_HOME = $G8R_HOME
 tac
+        fi
+        exit 1
 esac
