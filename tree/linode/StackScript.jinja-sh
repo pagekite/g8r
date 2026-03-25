@@ -1,0 +1,24 @@
+#!/bin/bash
+# <UDF name="G8R_ID" label="Governated host ID/secret" />
+# G8R_ID=
+
+exec >/root/StackScript.log 2>&1
+set -x
+set -e
+
+# Wait for the network...
+date
+while [ $(ip addr |grep -v inet6 |grep -c global) -lt 1 ]; do
+    sleep 10
+    date
+done
+ping -c2 {{ g8r_governator_hostname }} || ping -c5 {{ g8r_governator_hostname }} || {
+    ip route
+    ip addr
+    sleep 120
+}
+
+mkdir -p /var/lib/g8r
+cd /var/lib/g8r
+curl {{ g8r_url_base }}/hosts/${G8R_ID:-ANY}/000_bootstrap.sh >000_bootstrap.sh
+bash 000_bootstrap.sh
