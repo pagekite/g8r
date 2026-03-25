@@ -1,0 +1,38 @@
+#!/bin/bash
+#
+{%- if g8r_hosts|default({})|length < 1 %}
+#
+# No hosts defined, doing nothing.
+#
+{%- else %}
+
+TMP_HOSTS=$(mktemp -t g8r_hosts_.XXXX)
+cleanup() {
+    rm -f $TMP_HOSTS
+}
+trap cleanup EXIT
+
+sed -e '/G8R_HOSTS_BEGIN/,/G8R_HOSTS_END/ d' </etc/hosts >$TMP_HOSTS
+(
+cat <<tac
+##[ Governator generated hosts, do not edit ]################G8R_HOSTS_BEGIN###
+{% for host_name in g8r_hosts|default({}) %}{% set info = g8r_hosts[host_name] %}
+  {%- if info.ipv4 %}
+{{ info.ipv4 }}    {{ host_name }} {{ host_name }}.{{ host_domain }}
+  {%- endif %}
+  {%- if info.ipv6 %}
+{{ info.ipv6 }}    {{ host_name }} {{ host_name }}.{{ host_domain }}
+  {%- endif %}
+{%- endfor %}
+
+##[ End of Governator generated hosts ]########################G8R_HOSTS_END###
+tac
+) >>$TMP_HOSTS
+
+# Sanity check to make sure we didn't somehow nuke everything
+if [ $(grep -c localhost $TMP_HOSTS 2>/dev/null) -gt 0 ]; then
+    cat $TMP_HOSTS >/etc/hosts 
+fi
+
+{% endif %}
+#EOF#
