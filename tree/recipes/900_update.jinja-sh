@@ -1,0 +1,74 @@
+#!/bin/bash
+#
+# This is Governator's automated update script.
+#
+# It will wget all the scripts for this host, and auto-run any 0*.sh scripts
+# which are new or have changed since they were last run.
+#
+# It also takes care of configuring cron to launch our hourly script, if one
+# is provided.
+#
+UPDATE=$(date +%Y%m%d%H%M)
+
+
+#############################################################################
+# Download any new or modified scripts
+#
+mkdir -p /var/lib/g8r/scripts/versions /var/lib/g8r/logs
+
+cd /var/lib/g8r/scripts
+wget \
+    -r -N -nd -4 \
+    -e robots=off \
+    -U '{{ host_name }}/g8r' \
+    {{ g8r_url_base }}/hosts/{{ host_g8r_secret }}/
+
+for html in *.html; do
+    if [ -e ${html}.1 ]; then
+        mv ${html}.1 ${html}
+    fi
+done
+
+for script in *.sh; do
+    if [ -e ${script}.1 ]; then
+        mv ${script}.1 versions/${script}.$UPDATE
+        ln -f versions/${script}.$UPDATE ${script}
+    fi
+done
+chmod +x *.sh
+
+
+#############################################################################
+# Run any scripts which are new or have changed
+#
+cd /var/lib/g8r/scripts
+for script in $(ls -1 0*sh |sort); do
+    /bin/g8r run "${script}"
+done
+
+
+#############################################################################
+# Create (or remove) g8r hourly cron job (0x{{ cron_hash }} => hh:{{ cron_hour }})
+#
+{%- set cron_hash = host_g8r_secret|hash|truncate(4, end='') %}
+{%- set cron_hour = (cron_hash|int(16)) % 49 + 10 %}
+if [ -e /var/lib/g8r/scripts/090_hourly-cron.sh ]; then
+    if [ ! -e /etc/cron.d/g8r-hourly ]; then
+        cat <<tac >/etc/cron.d/g8r-hourly
+# This runs our scheduled hourly jobs. The minute they run at is chosen
+# at bootstrap time, in a stable-yet-unpredictable (hashed) way, to prevent
+# too many hosts from running their jobs at the exact same time.
+#
+{{ cron_hour }} * * * * root /bin/g8r run 900_hourly-cron.sh >/dev/null
+tac
+        systemctl restart cron || true
+    fi
+else
+    if [ ! -e /etc/cron.d/g8r-hourly ]; then
+        rm -f /etc/cron.d/g8r-hourly
+        systemctl restart cron || true
+    fi
+fi
+
+
+# EOF

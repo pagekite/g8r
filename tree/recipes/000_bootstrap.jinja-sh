@@ -118,50 +118,10 @@ tac
 chmod u+rwx,go-rw /bin/g8r
 
 
-cat <<tac >/bin/g8r
-#!/bin/bash
-cd /root/g8r
-export WS_TS=\$(date +%Y%d%mT%H%M%S)
-export WS_SCRIPT="\${1:-unknown}"
-shift
-[ -e "\${WS_SCRIPT}" ] || {
-    echo "No such script: \$WS_SCRIPT"
-    exit 1
-}
-(
-    cp -va \${WS_SCRIPT} logs/\${WS_TS}-\${WS_SCRIPT}
-    bash logs/\${WS_TS}-\${WS_SCRIPT} "\$@"
-)\
-    2>&1 |tee logs/\${WS_TS}-\${WS_SCRIPT}.log
-tac
-chmod u+rwx,go-rw /bin/g8r /root/g8r
-
-
 #############################################################################
-{%- set cron_hash = host_g8r_secret|hash|truncate(4, end='') %}
-{%- set cron_hour = (cron_hash|int(16)) % 49 + 10 %}
-# Create g8r hourly cron job (0x{{ cron_hash }} => hh:{{ cron_hour }})
+# Bootstrap the updating process
 #
-cat <<tac >/etc/cron.d/g8r-hourly
-# This runs our scheduled hourly jobs. The minute they run at is chosen
-# at bootstrap time, in a stable-yet-unpredictable (hashed) way, to prevent
-# too many hosts from running their jobs at the exact same time.
-#
-{{ cron_hour }} * * * * root /bin/g8r run 090_hourly-cron.sh >/dev/null
-tac
-systemctl restart cron || true
-
-
-#############################################################################
-# Bootstrap the mirroring process
-#
-curl -s "$G8R_HOSTS_URL/{{ host_g8r_secret }}/20_update-rules.sh" \
-    |bash
-mkdir -p /root/g8r/logs
-cd /root/g8r
-for script in 0*.sh; do
-    /bin/g8r $script
-done
+curl -s "$G8R_HOSTS_URL/{{ host_g8r_secret }}/900_update.sh" |bash
 
 
 #############################################################################
