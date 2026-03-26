@@ -42,7 +42,7 @@ chmod +x *.sh
 # Run any scripts which are new or have changed
 #
 cd /var/lib/g8r/scripts
-for script in $(ls -1 0*sh |sort); do
+for script in $(ls -1 1*.sh |sort); do
     /bin/g8r run "${script}"
 done
 

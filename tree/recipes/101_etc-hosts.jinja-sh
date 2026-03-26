@@ -17,12 +17,12 @@ sed -e '/G8R_HOSTS_BEGIN/,/G8R_HOSTS_END/ d' </etc/hosts >$TMP_HOSTS
 cat <<tac
 ##[ Governator generated hosts, do not edit ]################G8R_HOSTS_BEGIN###
 {% for host_name in g8r_hosts|default({}) %}{% set info = g8r_hosts[host_name] %}
-  {%- if info.ipv4 %}
-{{ info.ipv4 }}    {{ host_name }} {{ host_name }}.{{ host_domain }}
-  {%- endif %}
-  {%- if info.ipv6 %}
-{{ info.ipv6 }}    {{ host_name }} {{ host_name }}.{{ host_domain }}
-  {%- endif %}
+  {%- if info.ipv4 %}{% for ip in info.ipv4 %}
+{{ ip }}    {{ host_name }} {{ host_name }}.{{ host_domain }}
+  {%- endfor %}{% endif %}
+  {%- if info.ipv6 %}{% for ip in info.ipv6 %}
+{{ ip }}    {{ host_name }} {{ host_name }}.{{ host_domain }}
+  {%- endfor %}{% endif %}
 {%- endfor %}
 
 ##[ End of Governator generated hosts ]########################G8R_HOSTS_END###

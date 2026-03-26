@@ -1,0 +1,13 @@
+<html><head>
+  <title>Available rules</title>
+</head><body>
+
+<ul>
+{% for file in ls('.') -%}
+  {%- if file[-3:] == '.sh' %}
+    <li><a href="{{ file }}">{{ file }}</a> [{{ cat(file)|hash('md5') }}]</li>
+  {%- endif %}
+{%- endfor %}
+</ul>
+
+</body></html>
