@@ -15,7 +15,7 @@ EXCLUDE = grep -v -e /bin/ -e /canaries/ -e /hosts/ -e /skeletons/ -e /recipes/
 MAKE_ONLY ?= cat
 TARGETS = find . -name \*.jinja* -o -name \*.md \
             |$(MAKE_ONLY) |$(EXCLUDE) \
-            |grep -v -e '.swp$$' -e '.py$$' -e '~$$' -e 'PLAN.md' |sort \
+            |grep -v -e '.swp$$' -e '.py$$' -e '~$$' -e 'README.md' -e 'PLAN.md' |sort \
             |sed -e 's/md$$/html/g' \
                  -e 's/jinja-txt$$/txt/g' \
                  -e 's/jinja-rss$$/rss/g' \
