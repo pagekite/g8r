@@ -41,7 +41,6 @@ if [ $(grep -c '^Port {{ g8r_sshd_port }}' $SC) -lt 1 ]; then
 #
 Port {{ g8r_sshd_port }}
 PermitRootLogin without-password
-RSAAuthentication yes
 PubkeyAuthentication yes
 #
 tac
@@ -60,12 +59,27 @@ DPkg::Options {
    "--force-confold";
 }
 tac
+export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get upgrade -y
-apt-get install -y {{ g8r_always_install|default('python3') }} \
-    sudo build-essential make less screen vim git jq findutils xz-utils \
+
+# These are (mainly) packages g8r itself depends upon
+apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+    sudo {{ g8r_always_install|default('python3') }} \
+    build-essential make less screen vim git jq findutils xz-utils \
     traceroute dnsutils net-tools psmisc e2fsprogs tar rsync curl wget \
     openntpd python3-jinja2 python3-yaml python3-markdown
+
+# grub-pc doesn't like noninteractive installation; if asked, guess...
+ROOT_DEV=$(mount |grep 'on / ' |head -1 |cut -f1 -d\ )
+echo "grub-pc grub-pc/install_devices multiselect $ROOT_DEV" \
+  |debconf-set-selections
+
+# We allow this to fail; which happens when someone screws up somehow
+# We'd like to pick it up later and figure out, but don't want to block
+# the bootstrapping.
+apt-get upgrade -y \
+    -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+ || true
 
 
 #############################################################################
@@ -105,15 +119,14 @@ curl -s "{{ g8r_url_base }}/files/backups/{{ host_g8r_secret }}.tar.xz" \
 
 
 #############################################################################
-# Create g8r tool, logs
+# Install g8r and other tools
 #
 mkdir -p /var/lib/g8r
 cd /var/lib/g8r
 curl -s "$G8R_FILES_URL/g8r-tools.tar.gz" |tar xvfz -
-ln -fs /var/lib/g8r /root/g8r-home
 cat <<tac >/bin/g8r
 #!/bin/bash
-exec /var/lib/g8r/g8r "$@"
+exec /var/lib/g8r/g8r "\$@"
 tac
 chmod u+rwx,go-rw /bin/g8r
 

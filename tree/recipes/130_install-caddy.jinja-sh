@@ -2,12 +2,6 @@
 #
 # Content version {{ g8r_static_sites_version|default("undefined.") }}
 #
-export THIS_SCRIPT_DONE=/root/g8r/logs/DONE.$(md5sum "$0" |cut -b1-32)
-if [ -e $THIS_SCRIPT_DONE ]; then
-  echo "Aborting, this script, this version, already ran."
-  exit 0
-fi
-
 cd /
 export LC_ALL=C
 export LANG=C
@@ -18,6 +12,7 @@ set -e
 #############################################################################
 # Install caddy as a static file server and reverse proxy
 #
+export DEBIAN_FRONTEND=noninteractive
 apt-get install caddy
 
 
@@ -39,7 +34,7 @@ else
 fi
 {% endif %}{% endif %}{% endfor %}
 
-chmod go-rwx /var/lib/www-static/*/.git
+chmod go-rwx /var/lib/www-static/*/.git || true
 
 
 #############################################################################
@@ -73,5 +68,4 @@ tac
 systemctl reload caddy || systemctl start caddy
 
 
-touch $THIS_SCRIPT_DONE
 #EOF#

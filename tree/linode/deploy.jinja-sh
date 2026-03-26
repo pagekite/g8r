@@ -1,0 +1,60 @@
+#!/bin/bash
+cd "$(dirname $0)"
+[ "$1" = "" -o ! -d "../../exposed/hosts/$1" ] && cat <<tac && exit 1
+Usage: deploy.sh <host-secret>
+
+This will create a new linode, bootstrapped as the host defined by
+<host-secret>.
+
+You must have the \`linode-cli\` tool on your PATH for this to work,
+and be authenticated with permission to create new linodes.
+tac
+
+G8R_TREE="$(cd ..; pwd)"
+HOST_DIR="../../exposed/hosts/$1"
+HOST_SECRET="$1"
+ROOT_PASSWD="$(pwgen 24 1)"
+STACKSCRIPT="$(jq .id bootstrap-script.json)"
+
+if [ "$(which linode-cli)" = "" ]; then
+    echo 'Sorry, linode-cli not found on your PATH. Aborting.'
+    exit 2
+fi
+if [ -e "$HOST_DIR"/linode.json ]; then
+    echo 'Sorry, host already has a linode.json file. Aborting.'
+    exit 3
+fi
+if [ "$STACKSCRIPT" = "" ]; then
+    echo 'Sorry, could not figure out our stackscript ID. Aborting.'
+    exit 4
+fi
+
+linode-cli linodes create --json \
+    --label="$(echo $HOST_SECRET | sed -e 's/-[^-]*$//')" \
+    --booted=true \
+    --root_pass="$ROOT_PASSWD" \
+    --stackscript_id="$STACKSCRIPT" \
+    --stackscript_data="{\"G8R_ID\": \"${HOST_SECRET}\"}" \
+    |jq '.[0]' \
+    |tee "$HOST_DIR/linode.json" \
+||rm -f "$HOST_DIR/linode.json"
+
+cd $HOST_DIR
+source g8r.vars
+ipv6="[$(jq .ipv6 linode.json 2>/dev/null |sed -e s,/128,,)]"
+ipv4="$(jq .ipv4 linode.json 2>/dev/null)"
+[ "$ipv4" = "" ] && ipv4="[]"
+cat <<tac >host.json
+{
+  "g8r_hosts": {
+    "$host_name": {
+      "ipv4": $ipv4,
+      "ipv6": $ipv6
+    }
+  }
+}
+tac
+
+cd $G8R_TREE
+../tools/update_variables.py
+make

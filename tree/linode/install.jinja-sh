@@ -1,0 +1,37 @@
+#!/bin/bash
+cat <<tac
+This script will add the generated StackScript to your Linode account.
+
+You must have the \`linode-cli\` tool on your PATH for this to work,
+and be authenticated with permission to create stackscripts.
+
+Press ENTER to continue, CTRL+C to abort.
+tac
+read
+if [ "$(which linode-cli)" = "" ]; then
+    echo 'Sorry, linode-cli not found on your PATH. Aborting.'
+    exit 1
+fi
+
+if [ -e 'bootstrap-script.json' ]; then
+    SCRIPT_ARG="$(jq .id bootstrap-script.json)"
+else
+    SCRIPT_ARG=""
+fi
+if [ "$SCRIPT_ARG" = "" ]; then
+    SCRIPT_WHAT="create"
+else
+    SCRIPT_WHAT="update"
+fi
+
+linode-cli stackscripts $SCRIPT_WHAT --json \
+    --label "{{ g8r_governating_domain }}-g8r-{{ g8r_governator_hostname }}" \
+    --description "Governator bootstrap script for {{ g8r_governating_domain }} via {{ g8r_governator_hostname }}" \
+    --images "linode/debian11" \
+    --images "linode/debian12" \
+    --images "linode/debian13" \
+    --is_public false \
+    --script "$(cat StackScript.sh)" $SCRIPT_ARG \
+    |jq '.[0]' \
+    |tee bootstrap-script.json \
+||rm -f bootstrap-script.json 

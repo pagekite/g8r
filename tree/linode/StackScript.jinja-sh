@@ -18,7 +18,7 @@ ping -c2 {{ g8r_governator_hostname }} || ping -c5 {{ g8r_governator_hostname }}
     sleep 120
 }
 
-mkdir -p /var/lib/g8r
-cd /var/lib/g8r
+mkdir -p /var/lib/g8r/scripts
+cd /var/lib/g8r/scripts
 curl {{ g8r_url_base }}/hosts/${G8R_ID:-ANY}/000_bootstrap.sh >000_bootstrap.sh
 bash 000_bootstrap.sh
