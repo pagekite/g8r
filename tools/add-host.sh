@@ -4,6 +4,8 @@ source g8r.vars
 [ "$1" = "" -o "$2" = "" -o ! -d "skeletons/$2" ] && cat "../docs/help/add-host.txt" && exit 1
 
 G8R_TREE="$(pwd)"
+G8R_TOOLS="$(cd ../tools; pwd)"
+
 HOST_NAME="$1"
 HOST_TYPE="$2"
 HOST_DOMAIN="${3:-$g8r_governating_domain}"
@@ -30,19 +32,23 @@ host_ipv4=$IPv4
 host_ipv6=$IPv6
 host_g8r_secret=${HOST_SECRET}
 tac
-[ "$IPv4" != "" ] && IPv4="\"$IPv4\""
-[ "$IPv6" != "" ] && IPv6="\"$IPv6\""
-cat <<tac >host.json
-{
-  "g8r_hosts": {
-    "${HOST_NAME}": {
-       "ipv4": [${IPv4}],
-       "ipv6": [${IPv6}],
-       "type": "${HOST_TYPE}"
-    }
-  }
-}
-tac
+
+"${G8R_TOOLS}"/json_edit.py \
+    host.json \
+       "g8r_hosts/${HOST_NAME}/type" = "${HOST_TYPE}" \
+       "g8r_hosts/${HOST_NAME}" remove "ipv4" \
+       "g8r_hosts/${HOST_NAME}" remove "ipv6"
+
+if [ "$IPv4" != "" ]; then
+    "${G8R_TOOLS}"/json_edit.py \
+        host.json \
+            "g8r_hosts/${HOST_NAME}/ipv4" append "${IPv4}"
+fi
+if [ "$IPv6" != "" ]; then
+    "${G8R_TOOLS}"/json_edit.py \
+        host.json \
+            "g8r_hosts/${HOST_NAME}/ipv6" append "${IPv6}"
+fi
 
 cd "$G8R_TREE/../exposed/hosts" || exit 3
 ln -fs "$DIR" . || exit 4

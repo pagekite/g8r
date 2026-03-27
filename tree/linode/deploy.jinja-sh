@@ -11,6 +11,8 @@ and be authenticated with permission to create new linodes.
 tac
 
 G8R_TREE="$(cd ..; pwd)"
+G8R_TOOLS="${G8R_TREE}/tools
+
 HOST_DIR="../../exposed/hosts/$1"
 HOST_SECRET="$1"
 ROOT_PASSWD="$(pwgen 24 1)"
@@ -41,21 +43,26 @@ linode-cli linodes create --json \
 
 cd $HOST_DIR
 source g8r.vars
-ipv6="[$(jq --indent 0 .ipv6 linode.json 2>/dev/null |sed -e s,/128,,)]"
-ipv4="$(jq --indent 0 .ipv4 linode.json 2>/dev/null)"
-[ "$ipv4" = "" ] && ipv4="[]"
-cat <<tac >host.json
-{
-  "g8r_hosts": {
-    "$host_name": {
-      "ipv4": $ipv4,
-      "ipv6": $ipv6,
-      "type": "${host_type}"
-    }
-  }
-}
-tac
 
-cd $G8R_TREE
-../tools/update_variables.py
+IPv6="[$(jq --indent 0 .ipv6 linode.json 2>/dev/null |sed -e s,/128,,)]"
+IPv4="$(jq --indent 0 .ipv4 linode.json 2>/dev/null)"
+
+"${G8R_TOOLS}"/json_edit.py \
+    host.json \
+       "g8r_hosts/${host_name}" remove "ipv4" \
+       "g8r_hosts/${host_name}" remove "ipv6"
+
+if [ "$IPv4" != "" ]; then
+    "${G8R_TOOLS}"/json_edit.py \
+        host.json \
+            "g8r_hosts/${host_name}/ipv4" append "${IPv4}"
+fi
+if [ "$IPv6" != "" ]; then
+    "${G8R_TOOLS}"/json_edit.py \
+        host.json \
+            "g8r_hosts/${host_name}/ipv6" append "${IPv6}"
+fi
+
+cd "$G8R_TREE"
+"${G8R_TOOLS}"/update_variables.py
 make
