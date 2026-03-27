@@ -21,6 +21,13 @@ case "$COMMAND" in
         exec ${G8R_TOOLS}/init.sh
         ;;
 
+    etc-hosts)
+        echo "About to update /etc/hosts - sudo may prompt for a password." >&2
+        for etc_hosts in ./tree/hosts-*/101_etc-hosts.sh; do
+            sudo "${etc_hosts}"
+        done
+        ;;
+
     add-domain)
         exec ${G8R_TOOLS}/add-domain.sh "$@"
         ;;
@@ -65,7 +72,12 @@ case "$COMMAND" in
         fi
         ;;
 
-    *)
+    *|help)
+        if [ "$COMMAND" = "help" -a "$1" != "" ]; then
+            cat "${G8R_HOME}/docs/help/$1.txt" 2>/dev/null && exit 0
+            echo "Oops! Topic not found: $1"
+            echo "-------------------------- -- --- - - -- -- -  -"
+        fi
         cat <<tac
 Usage: g8r <command> [...]
 
@@ -80,9 +92,16 @@ tac
 tac
         [ -e "$G8R_HOME/tools/add-domain.sh" ] && cat <<tac
     init       Peform basic setup of the Governator Server
-    make       Rebuild scripts by running make in \$G8R_HOME/tree
     add-domain Add a new domain (run w/o args for help)
     add-host   Add a new host (run w/o args for help)
+    make       Rebuild scripts by running make in \$G8R_HOME/tree
+
+    etc-hosts  Update /etc/hosts on this machine using current inventory
+    deploy     Deploy a host on the VPS provider of your choice
+    backup     Download the most recent backups from a hosts
+    metrics    Fetch the metrics/monitoring data from a host
+    update     Run \`g8r run --force 900_update.sh\` on a host
+    undeploy   Undeploy a host (delete the VPS)
 tac
         [ -e "$G8R_HOME/scripts/" ] && cat <<tac
     ls         List available scripts

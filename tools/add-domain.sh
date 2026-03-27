@@ -1,15 +1,5 @@
 #!/bin/bash
-[ "$1" = "" ] && cat <<tac && exit 1
-Usage: g8r add-domain <domain.tld> [var=val ...]
-
-Add a new domain to your Governator for management, optionally setting
-global domain varibles at the same time.
-
-Examples:
-
-    g8r add-domain foo.com g8r_sshd_port=23 g8r_always_install="screen git"
-
-tac
+[ "$1" = "" ] && cat "$(dirname $0)/../docs/help/add-domain.txt" && exit 1
 
 cd "$(dirname $0)/../tree"
 
