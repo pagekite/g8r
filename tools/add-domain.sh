@@ -7,7 +7,7 @@ DOM="$1"
 DIR="hosts-$1"
 shift
 if [ -e "$DIR" ]; then
-    echo "Already exists: $DIR"
+    echo "Already exists: $DIR" >&2
     [ "$FORCE_ADD" = "" ] && exit 2
 fi
 
@@ -29,3 +29,6 @@ cat <<tac >g8r.json
     "g8r_hosts": {}
 }
 tac
+
+echo ADDED_DOMAIN_DIR=\"$(pwd)\"
+echo ADDED_DOMAIN=\"${DOM}\"
