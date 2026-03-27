@@ -81,8 +81,64 @@ the source of [tools/init.sh](tools/init.sh) should be relatively easy to read.
 or just want to run this off a laptop or other personal computer,
 you can use <https://pagekite.net/> to expose your Governator Server to the web.
 In this case,
-you will provide your `kitename.pagekite.me` domain name as the answer to question 3 above.
+you will provide your `kitename.pagekite.me` domain name as the answer to question 5 above.
 Note that managed servers will only be able to update themselves when the Governator Server is online.
+
+
+### Using the g8r tool
+
+If you said yes to question 6 when running `g8r init`,
+there will be a `g8r-example.org` tool on your path which you can run to manage your Governated servers.
+In the examples below we use `./g8r` to do the same thing.
+
+Run it without arguments to get help:
+
+    ./g8r
+
+Or to get help about a specific topic:
+
+    ./g8r help add-host
+
+(FIXME: Much of the help is not yet written.)j
+
+
+### Adding and provisioning a host
+
+To add a host (a static Caddy webserver) to your default domain:
+
+    # add-host <type> <hostname>
+    ./g8r add-host web www
+
+If the server already exists and you know its public IP addresses,
+this form is preferred:
+
+    IPV4=1.2.3.4 IPV6=2001:DB8::1 ./g8r add-host web www
+
+This creates the host definition,
+and assigns it a secret which is used to bootstrap and download updates.
+The tool will print out the server secret and a bootstrapping URL.
+
+If the VPS already exists,
+you can provision it manually by logging on to your VPS and running as root:
+
+    curl https://bootstrapping/url/here/... |bash
+
+Or if you have configured and enabled the [Linode integration](docs/LINODE.md),
+you can create the VPS and bootstrap it like so:
+
+    ./tree/linode/deploy.sh web-www-SECRET
+
+Once you have created and provisioned the server,
+you may want to update /etc/hosts on your Governator Server:
+
+    ./g8r etc-hosts
+
+(Actually updating public DNS is a TODO/FIXME item.)
+
+
+### Adding another entire domain
+
+
 
 
 ## But Why?
