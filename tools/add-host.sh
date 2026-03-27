@@ -30,6 +30,8 @@ host_ipv4=$IPv4
 host_ipv6=$IPv6
 host_g8r_secret=${HOST_SECRET}
 tac
+[ "$IPv4" != "" ] && IPv4="\"$IPv4\""
+[ "$IPv6" != "" ] && IPv6="\"$IPv6\""
 cat <<tac >host.json
 {
   "g8r_hosts": {
