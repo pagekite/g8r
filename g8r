@@ -73,6 +73,7 @@ case "$COMMAND" in
         ;;
 
     *|help)
+        G8R=$(basename $0)
         if [ "$COMMAND" = "help" -a "$1" != "" ]; then
             cat "${G8R_HOME}/docs/help/$1.txt" 2>/dev/null && exit 0
             echo "Oops! Topic not found: $1"
@@ -109,7 +110,9 @@ tac
 tac
         cat <<tac
 
-G8R_HOME = $G8R_HOME
+Try \`$G8R help <command>\` (e.g. \`$G8R help add-host\`) to learn more.
+
+[G8R_HOME=$G8R_HOME]
 tac
         exit 99
 esac
