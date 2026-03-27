@@ -1,7 +1,8 @@
 # Governator - g8r
 
-curl|bash your servers into shape!
+curl|bash your servers into submission!
 
+**PROJECT STATUS:** Pre-Alpha. Do Not Use.
 
 ## What's this?
 
@@ -15,6 +16,7 @@ Like Ansible (or Puppet, or Chef),
 Governator describes how to configure and/or update a fleet of servers.
 Dabbling in orchestration,
 g8r also has opinions on how to implement CI/CD workflows,
+backups,
 monitoring,
 and routine system upgrades and updates over time.
 
@@ -89,9 +91,31 @@ My lofty goal is to minimize the complexity of the special purpose tools used to
 and rely on battle tested,
 stable and *unlikely to change* tools and standards as much as possible.
 
+Aside from these *standard tools*,
+all of the code used to manage Governated servers fits comfortably in this repository.
+It's not a lot of code,
+it can be read and understood - and customized.
+
+Reducing dependencies and keeping the system as minimalist as possible,
+should reduce the time spent on maintaining and updating the administration tools themselves.
+This goal is stability for years,
+decades even.
 Updating servers is necessary.
 I would rather not have to also worry about updating the tool I use to update the servers.
 
 Also,
-Ansible kept yelling at me that my rules were deprecated.
-So I'm deprecating Ansible.
+I'm a bit of a troll.
+I can't wait to tell everyone I manage my infra using curl|bash.
+
+
+## Credits and Thanks
+
+Governator is (C) 2026,
+Bjarni R. Einarsson <https://bre.klaki.net/> and
+The Beanstalks Project ehf <https://pagekite.net/company/>.
+
+The license for this collection of tools and code is MIT.
+See [LICENSE.txt](LICENSE.txt) for details.
+
+Many thanks to Kría for the cool gator.
+
