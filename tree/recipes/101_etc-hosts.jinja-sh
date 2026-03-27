@@ -12,10 +12,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-sed -e '/G8R_HOSTS_BEGIN/,/G8R_HOSTS_END/ d' </etc/hosts >$TMP_HOSTS
+sed -e '/G8R_HOSTS_BEGIN:{{ host_domain }}/,/G8R_HOSTS_END:{{ host_domain }}/ d' \
+    </etc/hosts >$TMP_HOSTS
 (
 cat <<tac
-##[ Governator generated hosts, do not edit ]################G8R_HOSTS_BEGIN###
+##[ Governator generated hosts, do not edit ]########G8R_HOSTS_BEGIN:{{ host_domain }}###
 {% for host_name in g8r_hosts|default({}) %}{% set info = g8r_hosts[host_name] %}
   {%- if info.ipv4 %}{% for ip in info.ipv4 %}
 {{ ip }}    {{ host_name }} {{ host_name }}.{{ host_domain }}
@@ -25,7 +26,7 @@ cat <<tac
   {%- endfor %}{% endif %}
 {%- endfor %}
 
-##[ End of Governator generated hosts ]########################G8R_HOSTS_END###
+##[ End of Governator generated hosts ]################G8R_HOSTS_END:{{ host_domain }}###
 tac
 ) >>$TMP_HOSTS
 
