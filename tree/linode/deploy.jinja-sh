@@ -35,21 +35,22 @@ linode-cli linodes create --json \
     --root_pass="$ROOT_PASSWD" \
     --stackscript_id="$STACKSCRIPT" \
     --stackscript_data="{\"G8R_ID\": \"${HOST_SECRET}\"}" \
-    |jq '.[0]' \
+    |jq --indent 2 '.[0]' \
     |tee "$HOST_DIR/linode.json" \
 ||rm -f "$HOST_DIR/linode.json"
 
 cd $HOST_DIR
 source g8r.vars
-ipv6="[$(jq .ipv6 linode.json 2>/dev/null |sed -e s,/128,,)]"
-ipv4="$(jq .ipv4 linode.json 2>/dev/null)"
+ipv6="[$(jq --indent 0 .ipv6 linode.json 2>/dev/null |sed -e s,/128,,)]"
+ipv4="$(jq --indent 0 .ipv4 linode.json 2>/dev/null)"
 [ "$ipv4" = "" ] && ipv4="[]"
 cat <<tac >host.json
 {
   "g8r_hosts": {
     "$host_name": {
       "ipv4": $ipv4,
-      "ipv6": $ipv6
+      "ipv6": $ipv6,
+      "type": "${host_type}"
     }
   }
 }

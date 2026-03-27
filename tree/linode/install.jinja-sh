@@ -32,6 +32,6 @@ linode-cli stackscripts $SCRIPT_WHAT --json \
     --images "linode/debian13" \
     --is_public false \
     --script "$(cat StackScript.sh)" $SCRIPT_ARG \
-    |jq '.[0]' \
+    |jq --indent 2 '.[0]' \
     |tee bootstrap-script.json \
 ||rm -f bootstrap-script.json 
