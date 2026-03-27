@@ -112,7 +112,7 @@ To add a host (a static Caddy webserver) to your default domain:
 If the server already exists and you know its public IP addresses,
 this form is preferred:
 
-    IPV4=1.2.3.4 IPV6=2001:DB8::1 ./g8r add-host web www
+    IPv4=10.2.3.4 IPv6=2001:DB8::1 ./g8r add-host web www
 
 This creates the host definition,
 and assigns it a secret which is used to bootstrap and download updates.

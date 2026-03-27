@@ -211,8 +211,8 @@ fi
 # Create hosts-$DOMAIN in tree
 echo >&2
 g8r_hosts_dir="tree/hosts-${g8r_governating_domain}"
-[ -d "${g8r_hosts_dir}" ] || $G8R_TOOLS/add-domain.sh ${g8r_governating_domain} 2>/dev/null
-echo "** OK: Created \$G8R_HOME/${g8r_hosts_dir}" >&2
+[ -d "${g8r_hosts_dir}" ] || source <($G8R_TOOLS/add-domain.sh ${g8r_governating_domain})
+echo "** OK: Created $ADDED_DOMAIN_DIR" >&2
 
 
 # Create g8r-tools bundle in exposed/files
