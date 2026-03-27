@@ -12,16 +12,19 @@ if [ -e "$DIR" ]; then
 fi
 
 mkdir -p "$DIR"
+cd "$DIR"
 
-cat <<tac >"$DIR/g8r.vars"
+ln -fs ../recipes/101_etc-hosts.jinja-sh .
+
+cat <<tac >g8r.vars
 host_domain=$DOM
 tac
 while [ "$1" != "" ]; do
-    echo "$1" >>"$DIR/g8r.vars"
+    echo "$1" >>g8r.vars
     shift
 done
 
-cat <<tac >"$DIR/g8r.json"
+cat <<tac >g8r.json
 {
     "g8r_hosts": {}
 }
