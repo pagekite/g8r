@@ -11,7 +11,7 @@ and be authenticated with permission to create new linodes.
 tac
 
 G8R_TREE="$(cd ..; pwd)"
-G8R_TOOLS="${G8R_TREE}/tools
+G8R_TOOLS="$(cd ../../tools; pwd)"
 
 HOST_DIR="../../exposed/hosts/$1"
 HOST_SECRET="$1"
@@ -44,8 +44,8 @@ linode-cli linodes create --json \
 cd $HOST_DIR
 source g8r.vars
 
-IPv6="[$(jq --indent 0 .ipv6 linode.json 2>/dev/null |sed -e s,/128,,)]"
-IPv4="$(jq --indent 0 .ipv4 linode.json 2>/dev/null)"
+IPv6="$(jq --indent 0 .ipv6 linode.json 2>/dev/null |sed -e s,/128,,)"
+IPv4="$(jq --indent 0 '.ipv4[0]' linode.json 2>/dev/null)"
 
 "${G8R_TOOLS}"/json_edit.py \
     host.json \

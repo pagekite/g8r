@@ -13,7 +13,7 @@ set -e
 # Install caddy as a static file server and reverse proxy
 #
 export DEBIAN_FRONTEND=noninteractive
-apt-get install caddy
+apt-get install -y caddy
 
 
 #############################################################################

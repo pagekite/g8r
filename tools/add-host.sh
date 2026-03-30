@@ -1,7 +1,7 @@
 #!/bin/bash
 cd "$(dirname $0)/../tree" || exit 100
 source g8r.vars
-[ "$1" = "" -o "$2" = "" -o ! -d "skeletons/$2" ] && cat "../docs/help/add-host.txt" && exit 1
+[ "$1" = "" -o "$2" = "" -o ! -d "skeletons/$2" ] && cat "../docs/help/add-host.txt" && exit 1 || true
 
 G8R_TREE="$(pwd)"
 G8R_TOOLS="$(cd ../tools; pwd)"
@@ -19,6 +19,7 @@ if [ "$EXISTING" != "" ]; then
     echo "Already exists: $EXISTING" >&2
     [ "$FORCE_ADD" = "" ] && exit 2
 fi
+set -e
 
 mkdir -p "$DIR" || exit 2
 cd "$DIR"

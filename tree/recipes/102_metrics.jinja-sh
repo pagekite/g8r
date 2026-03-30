@@ -11,7 +11,7 @@ set -e
 # Install prometheus-node-exporter
 #
 export DEBIAN_FRONTEND=noninteractive
-apt-get install prometheus-node-exporter
+apt-get install -y prometheus-node-exporter
 
 
 #############################################################################
@@ -29,10 +29,11 @@ cat <<tac >/etc/prometheus-node-exporter.web.yaml
 # See: https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md
 # How: htpasswd -nBC 10 "" | tr -d ':\n'
 basic_auth_users:
-    governator: "{{ g8r_metrics_password_bcrypt|default('$2y$10$d0eMuR3u721fFceczqOr1u1CeXM4cWbn59QHQI6NvqJ5QH1ZzeP52') }}"
 tac
+echo '  governator: "{{ g8r_metrics_password_bcrypt|default('$2y$10$d0eMuR3u721fFceczqOr1u1CeXM4cWbn59QHQI6NvqJ5QH1ZzeP52') }}"' \
+    >>/etc/prometheus-node-exporter.web.yaml
 
-cat <<tac >/etc/defaults/prometheus-node-exporter
+cat <<tac >/etc/default/prometheus-node-exporter
 # Set the command-line arguments to pass to the server.
 # Due to shell escaping, to pass backslashes for regexes, you need to double
 # them (\\d for \d). If running under systemd, you need to double them again
@@ -58,7 +59,7 @@ ARGS="--web.config.file=/etc/prometheus-node-exporter.web.yaml \
     --collector.vmstat"
 tac
 
-systemctl enable
+systemctl enable prometheus-node-exporter
 systemctl restart prometheus-node-exporter
 
 
