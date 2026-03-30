@@ -1,0 +1,65 @@
+#!/bin/bash
+#
+cd /
+export LC_ALL=C
+export LANG=C
+set -x
+set -e
+
+
+#############################################################################
+# Install prometheus-node-exporter
+#
+export DEBIAN_FRONTEND=noninteractive
+apt-get install prometheus-node-exporter
+
+
+#############################################################################
+# Configure and harden prometheus-node-exporter:
+#
+#   - Change ports just for some obscurity
+#   - Disable some collectors, especially ones leaking system config
+#   - Create and enable the HTTP config file
+#   - Enable basic HTTP auth for a more security
+#
+cat <<tac >/etc/prometheus-node-exporter.web.yaml
+# Usernames and hashed passwords that have full access to the web
+# server via basic authentication. If empty, no basic authentication is
+# required. Passwords are hashed with bcrypt.
+# See: https://github.com/prometheus/exporter-toolkit/blob/master/docs/web-configuration.md
+# How: htpasswd -nBC 10 "" | tr -d ':\n'
+basic_auth_users:
+    governator: "{{ g8r_metrics_password_bcrypt|default('$2y$10$d0eMuR3u721fFceczqOr1u1CeXM4cWbn59QHQI6NvqJ5QH1ZzeP52') }}"
+tac
+
+cat <<tac >/etc/defaults/prometheus-node-exporter
+# Set the command-line arguments to pass to the server.
+# Due to shell escaping, to pass backslashes for regexes, you need to double
+# them (\\d for \d). If running under systemd, you need to double them again
+# (\\\\d to mean \d), and escape newlines too.
+ARGS="--web.config.file=/etc/prometheus-node-exporter.web.yaml \
+    --web.listen-address=:{{ g8r_metrics_port|default(1987) }} \
+    --web.disable-exporter-metrics \
+    --collector.textfile \
+    --collector.disable-defaults \
+    --collector.cpu \
+    --collector.diskstats \
+    --collector.filefd \
+    --collector.filesystem \
+    --collector.loadavg \
+    --collector.meminfo \
+    --collector.netstat \
+    --collector.pressure \
+    --collector.sockstat \
+    --collector.softnet \
+    --collector.stat \
+    --collector.tcpstat \
+    --collector.udp_queues \
+    --collector.vmstat"
+tac
+
+systemctl enable
+systemctl restart prometheus-node-exporter
+
+
+#EOF#

@@ -1,4 +1,5 @@
 tree/**/*.sh
+tmp/
 exposed/files/**
 venv
 __pycache__
