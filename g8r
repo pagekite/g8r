@@ -3,6 +3,7 @@
 export G8R_HOME=${G8R_HOME:-"$(cd $(dirname $0); pwd)"}
 export G8R_TOOLS="$G8R_HOME/tools"
 export G8R_TREE="$G8R_HOME/tree"
+export PATH="$PATH:$G8R_HOME:$G8R_TOOLS"
 
 COMMAND="$1"
 shift

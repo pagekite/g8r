@@ -6,8 +6,12 @@
 
   "#01": "This defines a list of log files we watch for new lines.",
   "#02": "Lines matching regexes in `log_events` trigger the named events.",
-  "log_files": ["/var/log/lighttpd/access.log"],
+  "log_files": [
+    "/var/log/lighttpd/access.log",
+    "/var/log/apache2/access.log"
+  ],
   "log_events": [
+    ["/events/\\?bootstrapped=(?P<re_host>[A-Za-z0-9_-]+)",    "LIVE_HOST"],
     ["/events/\\?cron_hourly=(?P<re_host>[A-Za-z0-9_-]+)",     "LIVE_HOST"],
     ["/events/\\?git_update=\\S+",                             "GIT_UPDATE"],
     ["/events/\\?site_update=(?P<re_domain>[A-Za-z0-9\\.-]+)", "SITE_UPDATE"]
@@ -52,11 +56,12 @@
   "#93": "Automations may output 'AUTOMATION: NAME' to STDOUT to trigger",
   "#94": "further processing, e.g. updated variables trigginrg a rebuild.",
   "automations": [
-    ["BEER_EVENT",      "/bin/echo", "ts"],
-    ["LIVE_HOST",       "/path/to/bin/seen-live", "re_host", "log_ip"],
+    ["HEALTH_CHECK",    "health-checks.sh"],
+    ["BEER_EVENT",      "echo", "$ts"],
+    ["LIVE_HOST",       "seen-live.sh", "$re_host", "$log_ip"],
     ["GIT_UPDATE",      "/path/to/bin/update-git-repos.sh"],
-    ["SITE_UPDATE",     "/path/to/bin/update-site-content.sh", "re_domain"],
-    ["VARS_UPDATE",     "/path/to/g8r/tools/update_variables.py"],
-    ["REBUILD_SCRIPTS", "/path/to/g8r/tools/rebuild"]
+    ["SITE_UPDATE",     "/path/to/bin/update-site-content.sh", "$re_domain"],
+    ["VARS_UPDATE",     "update_variables.py"],
+    ["REBUILD_SCRIPTS", "g8r", "make"]
   ]
 }

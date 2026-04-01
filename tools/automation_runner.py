@@ -20,6 +20,7 @@ import json
 import os
 import re
 import sys
+import shutil
 import subprocess
 import time
 
@@ -137,8 +138,9 @@ class AutomationRunner:
 
     def check_all_logs(self):
         for lf in self.log_files:
-            for event_tuple in self.check_file(lf):
-                yield event_tuple
+            if os.path.exists(lf):
+                for event_tuple in self.check_file(lf):
+                    yield event_tuple
 
     def run_cmd(self, cmd):
         try:
@@ -167,18 +169,22 @@ class AutomationRunner:
             child.kill()
 
     def run_command(self, event, cmd, args, info):
-        cmd_list = [cmd]
+        cmd_path = shutil.which(cmd) or cmd
+        cmd_list = [cmd_path]
         cmd_string = None
         try:
             for a in args:
-                cmd_list.append(str(info[a]))
+                if a and a[0] == '$':
+                    cmd_list.append(str(info[a[1:]]))
+                else:
+                    cmd_list.append(a)
 
-            cmd_string = ' '.join(cmd_list)
+            cmd_string = ' '.join([cmd] + cmd_list[1:])
             if cmd_string in self.ran_recently:
                 return
 
             self.ran_recently[cmd_string] = True
-            if not os.path.exists(cmd):
+            if not os.path.exists(cmd_path):
                 raise OSError('Not found: %s' % cmd)
 
             self.stdout(' * %s: %s' % (event, cmd_string))
