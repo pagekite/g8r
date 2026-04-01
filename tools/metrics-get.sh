@@ -30,10 +30,10 @@ fi
 for h in $HOSTS; do
     if [ "$RAW_METRICS" != "n" ]; then
         echo "# Metrics from $h"
-        curl -s "http://governator:${g8r_metrics_secret}@$h/metrics"
+        curl -s "http://governator:${g8r_metrics_secret}@$h:1987/metrics"
         echo
     else
-        ${G8R_TOOLS}/metrics_to_json.py "$h" \
+        ${G8R_TOOLS}/metrics_to_json.py "$h:1987" \
             -w "$h" -u governator -p "${g8r_metrics_secret}" \
             $FILTERS
     fi

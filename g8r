@@ -1,4 +1,5 @@
 #!/bin/bash
+[ "${G8R_DEBUG:-n}" != "n" ] && set -x
 export G8R_HOME=${G8R_HOME:-"$(cd $(dirname $0); pwd)"}
 export G8R_TOOLS="$G8R_HOME/tools"
 export G8R_TREE="$G8R_HOME/tree"
@@ -21,6 +22,22 @@ case "$COMMAND" in
         exec ${G8R_TOOLS}/init.sh
         ;;
 
+    hosts)
+        cd ${G8R_HOME}/tree
+        for ddir in hosts-*; do
+            source "$ddir/g8r.vars"
+            for hdir in $ddir/*-*-*; do
+                if [ -e "$hdir/host.json" ]; then
+                    source "$hdir/g8r.vars"
+                    hsec=$(echo $hdir |cut -f2 -d/)
+                    ipv4=$(jq ".g8r_hosts.$host_name.ipv4[0]" "$hdir/host.json" |sed -e 's/"//'g)
+                    ipv6=$(jq ".g8r_hosts.$host_name.ipv6[0]" "$hdir/host.json" |sed -e 's/"//'g)
+                    printf "%15s %32s %-19s %s\\n" "$ipv4" "$ipv6" "$host_name.$host_domain" "$hsec"
+                fi
+            done
+        done
+        ;;
+
     etc-hosts)
         echo "About to update /etc/hosts - sudo may prompt for a password." >&2
         for etc_hosts in ./tree/hosts-*/101_etc-hosts.sh; do
@@ -36,8 +53,36 @@ case "$COMMAND" in
         exec ${G8R_TOOLS}/add-host.sh "$@"
         ;;
 
+    rm-host)
+        HC=$($0 hosts |grep "$1" |wc -l)
+        H=$($0 hosts |grep "$1" |awk '{print $4}')
+        cd "${G8R_HOME}" && source tree/g8r.vars
+        [ "$1" != "" -a ! -e "exposed/hosts/$H/host.json" ] && echo -e "Host not found or ambiguous: $1"
+        [ "$1" = "" -o ! -e "exposed/hosts/$H/host.json" ] && cat ${G8R_HOME}/docs/help/rm-host.txt && exit 1
+        echo "Press ENTER to remove:" tree/hosts-*/"$H" " (CTRL+C aborts)"
+        read
+        rm -vrf exposed/hosts/"$H" tree/hosts-*/"$H"
+        ;;
+
     metrics)
         exec ${G8R_TOOLS}/metrics-get.sh "$@"
+        ;;
+
+    ssh)
+        [ "$1" = "" ] && echo "SSH to where?" && exit 1
+        cd "${G8R_HOME}" && source tree/g8r.vars
+        H=$($0 hosts |grep "$1" |head -1 |awk '{print $4}')
+        [ "$H" = "" ] && echo "Unknown host: $1" && exit 1
+        cd "${G8R_TREE}"/hosts*/"$H" || exit 1
+        source ../g8r.vars
+        source g8r.vars
+        shift
+        exec ssh -p ${g8r_sshd_port:-22} root@"$host_name.$host_domain" "$@"
+        ;;
+
+    update)
+        [ "$1" = "" ] && cat ${G8R_HOME}/docs/help/update.txt && exit 1
+        exec $0 ssh "$1" g8r run --force 900_update.sh
         ;;
 
     ls)
@@ -108,16 +153,19 @@ tac
 tac
         [ -e "$G8R_HOME/tools/add-domain.sh" ] && cat <<tac
     init       Peform basic setup of the Governator Server
-    add-domain Add a new domain (run w/o args for help)
-    add-host   Add a new host (run w/o args for help)
     make       Rebuild scripts by running make in \$G8R_HOME/tree
 
+    add-domain Add a new domain (run w/o args for help)
+    add-host   Add a new host (run w/o args for help)
     etc-hosts  Update /etc/hosts on this machine using current inventory
-    deploy     Deploy a host on the VPS provider of your choice
-    backup     Download the most recent backups from a hosts
+    rm-host    Remove a host (run w/o args for help)
+
+   *backup     Download the most recent backups from a host
+   *deploy     Deploy a host on the VPS provider of your choice
     metrics    Fetch the metrics/monitoring data from a host
+    ssh        SSH (as root) into a specific host
     update     Run \`g8r run --force 900_update.sh\` on a host
-    undeploy   Undeploy a host (delete the VPS)
+   *undeploy   Undeploy a host (delete the VPS)
 tac
         [ -e "$G8R_HOME/scripts/" ] && cat <<tac
     ls           List available scripts

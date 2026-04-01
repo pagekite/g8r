@@ -32,7 +32,7 @@
         "manifest_tool1_latest": "tool1_version",
         "manifest_tool2_latest": "tool2_version"
       },
-      "write": ["/path/to/g8r/canaries/website*/g8r.json"],
+      "write": ["/path/to/g8r/canaries/web-*/g8r.json"],
       "emit_events": ["REBUILD_CONFIGS"]
     },
     {

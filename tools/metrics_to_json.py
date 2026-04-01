@@ -80,7 +80,7 @@ def fetch_openmetrics_as_json(url, filters, wrap=None, username=None, password=N
         with urllib.request.urlopen(req, timeout=10) as response:
             json_text = openmetrics_as_json(response.read().decode('utf-8'), filters) 
     except Exception as e:
-        json_text = json.dumps({"error": str(e)}, indent=INDENT)
+        json_text = json.dumps({"error": str(e), "url": url}, indent=INDENT)
     if wrap:
         return '"%s": %s,' % (wrap, json_text)
     return json_text
@@ -147,5 +147,5 @@ if __name__ == '__main__':
     else:
         url = args.pop(0)
         if not url.startswith('http'):
-            url = "http://%s:1987/metrics" % (url,)
+            url = "http://%s/metrics" % (url,)
         print(fetch_openmetrics_as_json(url, args, **kwargs))
