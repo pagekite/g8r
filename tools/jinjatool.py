@@ -243,6 +243,7 @@ class JinjaToolExtension(Extension):
         if data:
             for line in data.splitlines():
                 var, val = [v.strip() for v in line.split(':', 1)]
+                val = val.strip('"')
                 try:
                     if ' ' in val:
                         val = [int(v) for v in val.split()]

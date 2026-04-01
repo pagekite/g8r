@@ -43,6 +43,51 @@ case "$COMMAND" in
         }
         ;;
 
+    metrics)
+        HOSTS="$*"
+        RAW_METRICS="${RAW_METRICS:-n}"
+        FILTERS="${FILTERS:-g8r}"
+        [ "$FILTERS" = '*' ] && FILTERS=""
+        if [ "$1" = "-a" ]; then
+            shift
+            HOSTS="$*"
+            for hd in $(find tree -type f -name 102_metrics.sh |cut -d/ -f1-3); do
+                HOSTS="$(cd $hd; source ../g8r.vars; source g8r.vars; echo $host_name.$host_domain) $HOSTS"
+            done
+        fi
+        if [ "$HOSTS" = "" ]; then
+            if [ -e "$G8R_HOME/scripts/" ]; then
+                HOSTS=$(hostname --fqdn)
+            else
+                echo "Usage: g8r hosts [-a] [host1.tld ...]"
+                exit 1
+            fi
+        fi
+        [ "$RAW_METRICS" != "n" ] || echo -n '{'
+        for h in $HOSTS; do
+            if [ "$RAW_METRICS" != "n" ]; then
+                echo "# Metrics from $h"
+                curl -s "http://governator:governator@$h/metrics"
+                echo
+            else
+                ${G8R_TOOLS}/metrics_to_json.py "$h" -w "$h" -u governator $FILTERS
+            fi
+        done
+        [ "$RAW_METRICS" != "n" ] || echo '"EOF":1}'
+        exit 0
+        ;;
+
+    healthchk)
+        cd "${G8R_HOME}" || exit 1
+        G8R_S_PATH="${G8R_HOME}/scripts/$1"
+        if [ -x "$G8R_S_PATH" ]; then
+            sed -e '/HEALTH_CHECK_CUT_HERE/,$ p; d' <"$G8R_S_PATH"| bash
+        else
+            echo "Not found: $G8R_S_PATH" >&2
+            exit 1
+        fi
+        ;;
+
     run)
         G8R_FORCE=n
         if [ "$1" = "--force" ]; then
@@ -67,7 +112,7 @@ case "$COMMAND" in
                     2>&1 |tee logs/"${G8R_TS}-${G8R_SCRIPT}.log"
             fi
         else
-            echo "Not found: $S_PATH" >&2
+            echo "Not found: $G8R_S_PATH" >&2
             exit 1
         fi
         ;;
@@ -105,8 +150,10 @@ tac
     undeploy   Undeploy a host (delete the VPS)
 tac
         [ -e "$G8R_HOME/scripts/" ] && cat <<tac
-    ls         List available scripts
-    run X      Run script X
+    ls           List available scripts
+    run X        Run script X
+    healthchk X  Run only the health-check fragment of script X
+    metrics      Fetch the local metrics/monitoring data
 tac
         cat <<tac
 

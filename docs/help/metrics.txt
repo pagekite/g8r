@@ -1,0 +1,19 @@
+Usage: g8r metrics [-a] [<host_fqdn> ...]
+
+Fetch and output the metrics for one or more hosts (all if -a is passed)
+as a JSON object.
+
+By default metrics are filtered to only include Governator specific
+metrics, but this can be altered by setting the `FILTERS=` environment
+variable before running the command.
+
+Other environment variables are `HEALTHY_TTL=n` and `JSON_INDENT=n`.
+
+Examples:
+
+    g8r metrics www.example.org
+    g8r metrics -a
+    
+    FILTERS='sockstat memory' g8r metrics www.example.org
+    FILTERS='*' g8r metrics -a
+

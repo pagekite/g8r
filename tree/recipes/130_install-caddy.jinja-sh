@@ -23,16 +23,23 @@ mkdir -p /var/lib/www-static/
 cd /var/lib/www-static/
 chmod ugo+rx,u+w,go-w .
 
+{% set fqdn = host_name + '.' + host_domain -%}
+mkdir -p {{ fqdn }}
+touch {{ fqdn }}/index.html
+echo 'OK' >{{ fqdn }}/.healthy.txt
+
 {% for site in g8r_all_domains %}{%- if site.static %}{% if site.domain %}
-{%- if site.reset %}
+ {%- if host_name in site.hosts|default([host_name]) %}
+  {%- if site.reset %}
 rm -rf "{{ site.domain }}"
-{% endif %}
+  {%- endif %}
 if [ -d "{{ site.domain }}" ]; then
     (cd "{{ site.domain }}" && git pull)
 else
     git clone "{{ site.static }}" "{{ site.domain }}"
 fi
-{% endif %}{% endif %}{% endfor %}
+echo 'OK' >{{ site.domain }}/.healthy.txt
+{% endif %}{% endif %}{% endif %}{% endfor %}
 
 chmod go-rwx /var/lib/www-static/*/.git || true
 
@@ -46,26 +53,87 @@ cat <<tac >/etc/caddy/Caddyfile
   cert_issuer acme
 }
 
+{% set sites = [] -%}
 {% for site in g8r_all_domains %}
+ {%- if host_name in site.hosts|default([host_name]) %}
   {%- if site.redirect %}
 
 {% if not site.caddy_tls|default(0) %}http://{% endif %}{{ site.domain }} {
    redir {{site.redirect}}
 }
-  {%- elif site.static %}
+  {%- elif site.static or site.proxy %}{% set r = sites.append(site.domain) %}
 {% if not site.caddy_tls|default(0) %}http://{% endif %}{{ site.domain }} {
   log {
     output file /var/log/caddy/access-{{ site.domain }}.log
   }
-  handle_path /* {
-    root * /var/lib/www-static/{{ site.domain }}/
-    file_server
+
+  # Forced Downloads
+  @downloads path_regexp \.(py|pdf|go|gz|xz|tgz|deb|rpm|exe|msi|sig)$
+  header @downloads Content-Disposition "attachment"
+
+  {%- if site.proxy %}
+  @not_static {
+    not path {{ site.static_paths|default('/no/static/paths/defined') }}
   }
+  reverse_proxy @not_static {{ site.proxy }}
+  {%- endif %}
+
+  root * {{ site.static_dir|default('/var/lib/www-static/' + site.domain) }}
+  file_server
 }
   {%- endif %}
+ {%- endif %}
 {% endfor %}
+{%- if fqdn not in sites %}
+http://{{ fqdn }} {
+  log {
+    output file /var/log/caddy/access-{{ fqdn }}.log
+  }
+
+  root * /var/lib/www-static/{{ fqdn }}/
+  file_server
+}
+{%- endif %}
+
 tac
 systemctl reload caddy || systemctl start caddy
 
+
+# Expose as metric that this update happened
+/var/lib/g8r/tools/metrics.sh caddy_updated caddy_updated gauge $(date +%s)
+/var/lib/g8r/tools/metrics.sh caddy_health0 caddy_health0 gauge $(date +%s)
+
+
+###################################################[HEALTH_CHECK_CUT_HERE]###
+# Mark the service healthy, if it is indeed healthy.
+# This must come last, so `g8r healthchk` can run.
+#
+HEALTHY=y
+
+URL=http://{{ fqdn }}
+if [ "$(curl -sk --resolve '{{ fqdn }}:80:127.0.0.1' \
+                 --resolve '{{ fqdn }}:443:127.0.0.1' \
+            $URL/.healthy.txt)" != "OK" ]; then
+    HEALTHY=n
+fi
+
+{% for site in g8r_all_domains %}
+  {%- if site.static %}
+URL={% if not site.caddy_tls|default(0) %}http://{% else %}https://{% endif %}{{ site.domain }}
+if [ "$(curl -sk --resolve '{{ site.domain }}:443:127.0.0.1' \
+                 --resolve '{{ site.domain }}:80:127.0.0.1' \
+          $URL/.healthy.txt)" != "OK" ]; then
+    HEALTHY=n
+fi
+  {%- endif %}
+{% endfor %}
+
+if [ "$HEALTHY" = "y" ]; then
+    /var/lib/g8r/tools/healthy.sh caddy
+else
+    # Reset our updated gauge - it can be used to calculate how long we have
+    # been continuously healthy.
+    /var/lib/g8r/tools/metrics.sh caddy_health0 caddy_health0 gauge $(date +%s)
+fi
 
 #EOF#

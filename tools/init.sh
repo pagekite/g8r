@@ -217,7 +217,7 @@ echo "** OK: Created $ADDED_DOMAIN_DIR" >&2
 
 # Create g8r-tools bundle in exposed/files
 echo >&2
-tar cfz exposed/files/g8r-tools.tar.gz g8r tools/*.py
+tar cfz exposed/files/g8r-tools.tar.gz g8r tools/*.py tools/{metrics,healthy}.sh
 echo "** OK: Created: $(ls -1hs exposed/files/g8r-tools.tar.gz)" >&2
 
 

@@ -3,6 +3,8 @@ METRIC_GROUP="$1"
 shift
 
 [ "$METRIC_GROUP" != "" ] || exit 1
+
+mkdir -p /var/lib/prometheus/node-exporter
 cd /var/lib/prometheus/node-exporter || exit 2
 
 echo >g8r_${METRIC_GROUP}.prom.tmp
