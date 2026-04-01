@@ -306,7 +306,7 @@ def Main():
                         line = line.split('#')[0]
                         if '=' in line:
                             k, v = line.split('=', 1)
-                            variables[k.strip()] = v.strip()
+                            variables[k.strip()] = v.strip().strip('"')
 
     for arg in sys.argv[1:]:
 

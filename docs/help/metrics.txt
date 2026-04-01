@@ -7,7 +7,11 @@ By default metrics are filtered to only include Governator specific
 metrics, but this can be altered by setting the `FILTERS=` environment
 variable before running the command.
 
-Other environment variables are `HEALTHY_TTL=n` and `JSON_INDENT=n`.
+Other environment variables:
+
+    JSON_INDENT=X  The number of spaces to indent with
+    HEALTHY_TTL=X  The number of seconds health is valid for
+    RAW_METRICS=Y  Set, to skip reformatting (show raw OpenMetrics)
 
 Examples:
 

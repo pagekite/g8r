@@ -36,45 +36,15 @@ case "$COMMAND" in
         exec ${G8R_TOOLS}/add-host.sh "$@"
         ;;
 
+    metrics)
+        exec ${G8R_TOOLS}/metrics-get.sh "$@"
+        ;;
+
     ls)
         cd ${G8R_HOME}/scripts 2>/dev/null && ls -1 *.sh 2>/dev/null || {
             echo "No g8r scripts installed" >&2
             exit 1
         }
-        ;;
-
-    metrics)
-        HOSTS="$*"
-        RAW_METRICS="${RAW_METRICS:-n}"
-        FILTERS="${FILTERS:-g8r}"
-        [ "$FILTERS" = '*' ] && FILTERS=""
-        if [ "$1" = "-a" ]; then
-            shift
-            HOSTS="$*"
-            for hd in $(find tree -type f -name 102_metrics.sh |cut -d/ -f1-3); do
-                HOSTS="$(cd $hd; source ../g8r.vars; source g8r.vars; echo $host_name.$host_domain) $HOSTS"
-            done
-        fi
-        if [ "$HOSTS" = "" ]; then
-            if [ -e "$G8R_HOME/scripts/" ]; then
-                HOSTS=$(hostname --fqdn)
-            else
-                echo "Usage: g8r hosts [-a] [host1.tld ...]"
-                exit 1
-            fi
-        fi
-        [ "$RAW_METRICS" != "n" ] || echo -n '{'
-        for h in $HOSTS; do
-            if [ "$RAW_METRICS" != "n" ]; then
-                echo "# Metrics from $h"
-                curl -s "http://governator:governator@$h/metrics"
-                echo
-            else
-                ${G8R_TOOLS}/metrics_to_json.py "$h" -w "$h" -u governator $FILTERS
-            fi
-        done
-        [ "$RAW_METRICS" != "n" ] || echo '"EOF":1}'
-        exit 0
         ;;
 
     healthchk)

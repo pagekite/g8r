@@ -22,12 +22,19 @@ cd $G8R_HOME
 
 ##############################################################################
 
+RANDCRAP=$(python3 -c \
+  'import os,base64;print(str(base64.urlsafe_b64encode(os.urandom(16)),"utf-8")[:12])')
+
 # These are the variables we are configuring
 g8r_governating_domain=example.org
 g8r_governator_hostname=g8r.example.org
 g8r_admin_email=root@example.org
 g8r_init_have_webserver=N
 g8r_init_static_path=/var/www/html
+g8r_metrics_secret=$(python3 -c \
+  'import os,base64;print(str(base64.urlsafe_b64encode(os.urandom(16)),"utf-8")[:12])' \
+  2>/dev/null || echo governator)
+
 
 # Load any previous progress...
 OUTPUT="${G8R_TREE}/g8r.vars"
@@ -35,11 +42,14 @@ OUTPUT="${G8R_TREE}/g8r.vars"
 
 # Guarantee we save on exit
 save() {
+    g8r_metrics_secret_bcrypt=$(htpasswd -nbBC 10 "" "$g8r_metrics_secret" 2>/dev/null |tr -d ':\n')
     cat <<tac >$OUTPUT
 g8r_governating_domain=${g8r_governating_domain}
 g8r_governator_hostname=${g8r_governator_hostname}
 g8r_admin_email=${g8r_admin_email}
 g8r_url_base=https://${g8r_governator_hostname}/g8r-${g8r_governating_domain}
+g8r_metrics_secret=${g8r_metrics_secret}
+g8r_metrics_password_bcrypt="${g8r_metrics_secret_bcrypt}"
 
 g8r_init_have_webserver=${g8r_init_have_webserver}
 g8r_init_static_path=${g8r_init_static_path}
@@ -81,6 +91,7 @@ mcheck() {
 }
 mcheck "make             " "$(which make)"
 mcheck "python3          " "$(which python3)"
+mcheck "htpasswd         " "$(which htpasswd)"
 mcheck "python: jinja2   " "$(python3 -c 'import jinja2; print("ok")' 2>/dev/null)"
 mcheck "python: markdown " "$(python3 -c 'import markdown; print("ok")' 2>/dev/null)"
 mcheck "python: yaml     " "$(python3 -c 'import yaml; print("ok")' 2>/dev/null)"
