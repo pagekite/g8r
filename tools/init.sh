@@ -10,7 +10,6 @@
 #   5. What is the public DNS domain name of this host?
 #   6. Create /usr/bin/$g8r_helper helper?
 #
-# Create git branch
 # Create /usr/bin/$g8r_helper
 # Create .../tree/hosts-domain/
 # Configure the static web-server
@@ -20,7 +19,25 @@ export G8R_TOOLS="$G8R_HOME/tools"
 export G8R_TREE="$G8R_HOME/tree"
 cd $G8R_HOME
 
+cat <<tac >&2
 ##############################################################################
+
+Oh hi! Welcome to the Governator!
+
+This tool will ask a few questions to get you started.
+
+If you need to pause for any reason, feel free to press CTRL+C and rerun
+the script later. Your progress won't be lost.
+
+Looks like your G8R_HOME is: ${G8R_HOME}
+Hope that's OK.
+
+Press ENTER to continue.
+
+##############################################################################
+tac
+read
+
 
 RANDCRAP=$(python3 -c \
   'import os,base64;print(str(base64.urlsafe_b64encode(os.urandom(16)),"utf-8")[:12])')
@@ -58,24 +75,8 @@ tac
 trap save EXIT
 
 
-cat <<tac >&2
 ##############################################################################
 
-Oh hi! Welcome to the Governator!
-
-This tool will ask a few questions to get you started.
-
-If you need to pause for any reason, feel free to press CTRL+C and rerun
-the script later. Your progress won't be lost.
-
-Looks like your G8R_HOME is: ${G8R_HOME}
-Hope that's OK.
-
-Press ENTER to continue.
-
-##############################################################################
-tac
-read
 
 echo -e '** Checking dependencies ...\n' >&2
 MISSING=0
@@ -186,14 +187,6 @@ save && source $OUTPUT
 ##############################################################################
 
 
-# Set up git branch for this setup
-echo >&2
-echo "** Creating and activating git branch: ${g8r_governating_domain}" >&2
-git branch "${g8r_governating_domain}" >/dev/null 2>&1
-echo -n "** " >&1
-git checkout "${g8r_governating_domain}" >/dev/null || exit 1 
-
-
 # Create g8r-$DOMAIN helper tool
 g8r_helper=g8r-${g8r_governating_domain}
 if [ -x "/usr/bin/$g8r_helper" ]; then
@@ -206,8 +199,6 @@ else
         cat <<tac >g8r-helper.tmp
 #!/bin/sh
 cd $G8R_HOME || exit 1
-git checkout ${g8r_governating_domain} || exit 2
-echo "==[ ${g8r_governating_domain} : \$(pwd) ]==" >&2
 exec ./g8r "\$@"
 tac
         chmod +x g8r-helper.tmp
@@ -267,7 +258,7 @@ cat <<tac >&2
 
 All set!
 
-This g8r repo has a new branch named: ${g8r_governating_domain}
+We recommend creating a git branch: git checkout -b ${g8r_governating_domain}
 
 Take care to NEVER push this branch to any public git forges, because
 it contains secrets relating to your Governator setup.
@@ -277,8 +268,8 @@ Governator managed servers will download scripts from here:
     ${g8r_url_base}
 
 You should now run \`git status\` to see which files and folders have been
-added to your tree, and commit the changes if you are happy. Then add some
-servers!
+added to your tree, CREATE A BRANCH, and commit the changes if you are happy.
+Then add some servers!
 
 ##############################################################################
 tac
