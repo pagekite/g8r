@@ -1,8 +1,11 @@
 #!/bin/bash
-[ "$1" = "" ] && cat "$(dirname $0)/../docs/help/add-domain.txt" && exit 1
+[ "${G8R_DEBUG:-n}" != "n" ] && set -x
+cd "$(dirname $0)/.."
+export PATH="$(pwd):$(pwd)/tools:$PATH"
 
-cd "$(dirname $0)/../tree"
+[ "$1" = "" ] && cat "docs/help/add-domain.txt" && exit 1
 
+cd tree
 DOM="$1"
 DIR="hosts-$1"
 shift

@@ -1,5 +1,7 @@
 #!/bin/bash
 [ "${G8R_DEBUG:-n}" != "n" ] && set -x
+cd "$(dirname $0)/.."
+export PATH="$(pwd):$(pwd)/tools:$PATH"
 
 HOSTS="$*"
 RAW_METRICS="${RAW_METRICS:-n}"
@@ -7,8 +9,7 @@ RAW_METRICS="${RAW_METRICS:-n}"
 FILTERS="${FILTERS:-g8r}"
 [ "$FILTERS" = '*' ] && FILTERS=""
 
-source $(dirname $0)/../tree/g8r.vars
-
+source tree/g8r.vars
 if [ "$1" = "-a" ]; then
     shift
     HOSTS="$*"
@@ -18,7 +19,7 @@ if [ "$1" = "-a" ]; then
 fi
 
 if [ "$HOSTS" = "" ]; then
-    if [ -e "$G8R_HOME/scripts/" ]; then
+    if [ -e "${G8R_HOME}/scripts/" ]; then
         HOSTS=$(hostname --fqdn)
     else
         cat "$(dirname $0)/../docs/help/metrics.txt"
@@ -33,7 +34,7 @@ for h in $HOSTS; do
         curl -s "http://governator:${g8r_metrics_secret}@$h:1987/metrics"
         echo
     else
-        ${G8R_TOOLS}/metrics_to_json.py "$h:1987" \
+        metrics_to_json.py "$h:1987" \
             -w "$h" -u governator -p "${g8r_metrics_secret}" \
             $FILTERS
     fi

@@ -37,7 +37,7 @@
         "manifest_tool2_latest": "tool2_version"
       },
       "write": ["/path/to/g8r/canaries/web-*/g8r.json"],
-      "emit_events": ["REBUILD_CONFIGS"]
+      "emit_events": ["REBUILD"]
     },
     {
       "pre_conditions": {},
@@ -47,7 +47,7 @@
         "g8r_hosts": "g8r_hosts"
       },
       "write": ["$GROUP/g8r.json"],
-      "emit_events": ["REBUILD_CONFIGS"]
+      "emit_events": ["REBUILD"]
     }
   ],
 
@@ -62,6 +62,6 @@
     ["GIT_UPDATE",      "/path/to/bin/update-git-repos.sh"],
     ["SITE_UPDATE",     "/path/to/bin/update-site-content.sh", "$re_domain"],
     ["VARS_UPDATE",     "update_variables.py"],
-    ["REBUILD_SCRIPTS", "g8r", "make"]
+    ["REBUILD",         "g8r", "make"]
   ]
 }

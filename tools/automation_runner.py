@@ -257,4 +257,8 @@ class AutomationRunner:
 
 
 if __name__ == '__main__':
-    AutomationRunner(sys.argv[1] if (len(sys.argv) > 1) else None).loop()
+    try:
+        ar = AutomationRunner(sys.argv[1] if (len(sys.argv) > 1) else None)
+        ar.loop()
+    except KeyboardInterrupt:
+        pass

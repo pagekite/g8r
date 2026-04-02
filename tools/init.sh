@@ -14,10 +14,14 @@
 # Create .../tree/hosts-domain/
 # Configure the static web-server
 #
+[ "${G8R_DEBUG:-n}" != "n" ] && set -x
+
 export G8R_HOME=${G8R_HOME:-"$(cd $(dirname $0)/..; pwd)"}
 export G8R_TOOLS="$G8R_HOME/tools"
 export G8R_TREE="$G8R_HOME/tree"
-cd $G8R_HOME
+
+cd "${G8R_HOME}"
+export PATH="$(pwd):$(pwd)/tools:$PATH"
 
 cat <<tac >&2
 ##############################################################################
@@ -198,7 +202,7 @@ else
     if [ "$g8r_create_helper" = "Y" ]; then
         cat <<tac >g8r-helper.tmp
 #!/bin/sh
-cd $G8R_HOME || exit 1
+cd "$G8R_HOME" || exit 1
 exec ./g8r "\$@"
 tac
         chmod +x g8r-helper.tmp
@@ -213,7 +217,7 @@ fi
 # Create hosts-$DOMAIN in tree
 echo >&2
 g8r_hosts_dir="tree/hosts-${g8r_governating_domain}"
-[ -d "${g8r_hosts_dir}" ] || source <($G8R_TOOLS/add-domain.sh ${g8r_governating_domain})
+[ -d "${g8r_hosts_dir}" ] || source <("${G8R_TOOLS}"/add-domain.sh ${g8r_governating_domain})
 echo "** OK: Created $ADDED_DOMAIN_DIR" >&2
 
 
@@ -231,7 +235,7 @@ if [ -d "$g8r_web_symlink" ]; then
 else
     if [ -d "${g8r_init_static_path}" ]; then
         echo "** Creating: $g8r_web_symlink" >&2
-        sudo ln -s "$G8R_HOME/exposed" "$g8r_web_symlink"
+        sudo ln -s "${G8R_HOME}/exposed" "$g8r_web_symlink"
     else
         echo "!! ERROR: Not found: ${g8r_init_static_path}" >&2
         exit 1
@@ -240,7 +244,7 @@ fi
 
 # Test it...
 TEST_FOR="$(date +%s).$$"
-echo "$TEST_FOR" >"$G8R_HOME/exposed/check.txt"
+echo "$TEST_FOR" >"${G8R_HOME}/exposed/check.txt"
 TEST_GOT="$(curl -s ${g8r_url_base}/check.txt)"
 if [ ! "$TEST_FOR" = "$TEST_GOT" ]; then
     echo "!! ERROR: curl test failed for: ${g8r_url_base}/check.txt" >&2
@@ -248,7 +252,7 @@ if [ ! "$TEST_FOR" = "$TEST_GOT" ]; then
     exit 2
 else
     echo "** OK: curl test passed for: ${g8r_url_base}" >&2
-    rm -f "$G8R_HOME/exposed/check.txt"
+    rm -f "${G8R_HOME}/exposed/check.txt"
 fi
 
 

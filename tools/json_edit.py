@@ -152,10 +152,12 @@ if __name__ == '__main__':
         print(__doc__)
         sys.exit(1)
     args = list(sys.argv[1:])
-    js = JsonSetter(args.pop(0))
+    fn = args.pop(0)
+    js = JsonSetter(fn)
     changes = 0
     while args:
         (target, op, value), args = args[:3], args[3:]
         changes += js.do(target, op, value)
     if changes:
         js.save()
+        print('CHANGED=%s' % fn)

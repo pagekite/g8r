@@ -1,10 +1,13 @@
 #!/bin/bash
-cd "$(dirname $0)/../tree" || exit 100
+[ "${G8R_DEBUG:-n}" != "n" ] && set -x
+cd "$(dirname $0)/.."
+export PATH="$(pwd):$(pwd)/tools:$PATH"
+
+cd tree || exit 100
 source g8r.vars
 [ "$1" = "" -o "$2" = "" -o ! -d "skeletons/$2" ] && cat "../docs/help/add-host.txt" && exit 1 || true
 
 G8R_TREE="$(pwd)"
-G8R_TOOLS="$(cd ../tools; pwd)"
 
 HOST_NAME="$1"
 HOST_TYPE="$2"
@@ -34,21 +37,21 @@ host_ipv6=$IPv6
 host_g8r_secret=${HOST_SECRET}
 tac
 
-"${G8R_TOOLS}"/json_edit.py \
+json_edit.py \
     host.json \
        "g8r_hosts/${HOST_NAME}/type" = "${HOST_TYPE}" \
        "g8r_hosts/${HOST_NAME}" remove "ipv4" \
-       "g8r_hosts/${HOST_NAME}" remove "ipv6"
+       "g8r_hosts/${HOST_NAME}" remove "ipv6" >/dev/null
 
 if [ "$IPv4" != "" ]; then
-    "${G8R_TOOLS}"/json_edit.py \
+    json_edit.py \
         host.json \
-            "g8r_hosts/${HOST_NAME}/ipv4" append "${IPv4}"
+            "g8r_hosts/${HOST_NAME}/ipv4" append "${IPv4}" >/dev/null
 fi
 if [ "$IPv6" != "" ]; then
-    "${G8R_TOOLS}"/json_edit.py \
+    json_edit.py \
         host.json \
-            "g8r_hosts/${HOST_NAME}/ipv6" append "${IPv6}"
+            "g8r_hosts/${HOST_NAME}/ipv6" append "${IPv6}" >/dev/null
 fi
 
 cd "$G8R_TREE/../exposed/hosts" || exit 3
