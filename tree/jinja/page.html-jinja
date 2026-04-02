@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{%- block head %}
+  <meta charset="utf-8">
+  {%- if page and page.redirect %}
+  <meta http-equiv="refresh" content="0; url={{ page.redirect }}">
+  {%- endif %}
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  {#-
+  <link rel="stylesheet" href="/jinja/governator.css"> 
+  #}
+  <style type="text/css">
+/* ***************************************************************************** */
+
+{{ cat(JINJATOOL_ROOT + '/jinja/style.css') }}
+
+/* ***************************************************************************** */
+  </style>
+  <title>Governator: {% block title %}bash|curl ftw{% endblock %}</title>
+  {%- if page and page.type in ('blog', 'blog2') %}
+  <script src="/blog/nav.js"></script>
+  {%- endif -%}
+  {%- block head_extra %}{% endblock %}
+{%- endblock %}
+</head><body>
+{%- block navigation %}
+  <div id="navigation"></div>
+{%- endblock %}
+  <a style="position: absolute; top: 0;" name="top"></a>
+  <div id="content">
+{%- if not page or not page.type == 'full' %}
+  {%- block page_top %}
+    <div id="content-header"></div>
+  {%- endblock %}
+    <div id="content-pages">
+{%- endif %}
+<!-- -------------------------------------------------------------------------- -->
+
+{%- block content %}{% endblock %}
+
+<!-- -------------------------------------------------------------------------- -->
+{%- if not page or not page.type == 'full' %}
+    </div><!-- id=content-pages -->
+  {%- if page and page.type in ('blog', 'blog2') %}
+    <div class='blog-nav'>
+      <p class='prev'></p><p class='next'></p>
+    </div>
+  {%- endif %}
+{%- endif %}
+{%- block page_bottom %}
+    <div id="footer"></div>
+{%- endblock %}
+
+  </div><!-- id=content -->
+  <div id="scroll-hint">
+    <a href="#top"><img title="Page top" alt="🠉" src="/jinja/imgs/arrow-up.png"></a>
+  </div>
+{%- block tail %}{% endblock %}
+</body></html>
