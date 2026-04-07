@@ -34,11 +34,13 @@ host_name=${HOST_NAME}
 host_type=${HOST_TYPE}
 host_ipv4=$IPv4
 host_ipv6=$IPv6
+host_backups="${BACKUPS:-tgz:auto}"
 host_g8r_secret=${HOST_SECRET}
 tac
 
 json_edit.py \
     host.json \
+       "g8r_hosts/${HOST_NAME}/secret" = "${HOST_SECRET}" \
        "g8r_hosts/${HOST_NAME}/type" = "${HOST_TYPE}" \
        "g8r_hosts/${HOST_NAME}" remove "ipv4" \
        "g8r_hosts/${HOST_NAME}" remove "ipv6" >/dev/null

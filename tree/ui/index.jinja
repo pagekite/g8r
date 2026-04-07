@@ -1,0 +1,124 @@
+{%- extends "/jinja/page.html-jinja" %}
+
+{%- set page = {'title': g8r_governating_domain} %}
+{%- set host_status = cat('../status/summary.json')|from_json %}
+{%- set dummy_schedule = {
+  '2026-04-06': '6am: A restarting thing',
+  '2026-04-15': '4am: Other thing'} %}
+{%- set dummy_backups = {
+  'how': 'rsync',
+  'when': 'today',
+  'size': '15gb'} %}
+{%- set dummy_events = {
+  'new': 2,
+  'events': [
+    {
+      'when': '2026-04-05 11:00',
+      'title': 'Rebooted something', 
+      'details': 'Rebooting went well! Many boots were reed!'
+    },{
+      'when': '2026-04-05 19:00',
+      'title': 'Shut it down', 
+      'details': 'Just make it stop, srsly!'
+    }
+  ]} %}
+
+{# TODO:
+
+Jinjatool:
+   - Friendly date for backups
+   - Friendly bytes for backups
+
+g8r:
+   - Create inventory of backups, maps hosts -> dates and sizes
+   - Create scheduler logic that gives us the next n events
+   - If the scheduler is used for backups or health, exclude that?
+   - hoststat needs health info
+
+ #}
+
+{%- block title %}{{ page.title }}{% endblock %}
+{%- block content %}
+
+    <h1>
+      <img src="imgs/Governator-by-Kria.png" alt="g8r">
+    </h1>
+
+  {%- for domdir in ls('..', '^hosts-') %}
+    {%- set domvars = cat('../' + domdir + '/g8r.vars')|from_vars_txt %}
+    {%- set domjson = cat('../' + domdir + '/g8r.json')|from_json %}
+
+    <h2>{{ domvars.host_domain }}</h2>
+    <table class='host-table'>
+      <tr>
+        <th class='host-healthy'></th>
+        <th class='host-name'>Host</th>
+        <th class='host-ips'>IPs &amp; URLs</th>
+        <th class='host-schedule'>Schedule</td>
+        <th class='host-backups'>💾</td>
+      </tr>
+    {%- for hostname in domjson.g8r_hosts %}
+      {%- set hostjson = domjson.g8r_hosts[hostname] %}
+      {%- set hoststat = host_status.get(hostjson.secret, {}) %}
+      <tr class='host'>
+        <td class='host-healthy {% if not hoststat.healthy %}un{% endif %}healthy'>
+          <input type="checkbox" id="host-toggle-{{ loop.index }}" class="toggle-input">
+          {%- if hoststat.seen %}
+            <a href="http://governator:{{ g8r_metrics_secret }}@{{ hostname }}.{{ domvars.host_domain }}:1987/metrics"
+               title="Seen at {{ hoststat.seen.when|date }} from {{ hoststat.seen.ip }}">
+              {%- if hoststat.healthy -%}
+                 <b class=dull>OK</b>
+              {%- else -%}
+                 <b class=warn>:-(</b>
+              {%- endif -%}
+            </a>
+          {%- else %}
+            <i class=faint>new</i>
+          {%- endif %}
+        </td>
+        <td class='host-name'>
+          <label for="host-toggle-{{ loop.index }}" class="toggle-label">
+            {{ hostname }}.{{ domvars.host_domain }}
+          </label>
+        </td>
+        <td class='host-ips'>
+          <p>{{- (hostjson.ipv4|default([]) + hostjson.ipv6|default([]))|join('<br>')|safe -}}</p>
+          <p class=details>{%- for dom, di in domjson.g8r_service_domains.items() %}{% if hostname in di.hosts %}
+            <a href="http://{{ dom }}/">http://{{ dom }}/</a>
+            {%- if not loop.last %}<br>{% endif %}
+          {%- endif %}{% endfor %}</p>
+        </td>
+        <td class='host-schedule'><pre class=details>
+          {{- dummy_schedule|cal|safe -}}
+        </pre><p class="placeholder">...</p></td>
+        <td class='host-backups'>
+          <p>{{ dummy_backups.when }}</p>
+          <p class=details>{{ dummy_backups.how }}</p>
+          <p class=details>{{ dummy_backups.size }}</p>
+        </td>
+      </li>
+    {%- else %}
+      <tr><td colspan=5 class="no-hosts"><i>No hosts configured</i></td></tr>
+    {%- endfor %}
+    </table>
+
+    <div id="events-container-wrap"><div id="events-container">
+      <input type="checkbox" id="events-toggle" class="toggle-input">
+      <label for="events-toggle" class="toggle-label">
+        <h2>Events{% if dummy_events.new %}
+          <span class=warn>({{ dummy_events.new }})</span>{% endif -%}
+        </h2>
+      </label>
+      <div class="events">
+    {%- for event in dummy_events.events %}
+         <div class="event">
+            <h3>{{ event.title }}</h3>
+            <h4>{{ event.when }}</h4>
+            <p class="message">{{ event.details }}</p>
+         </div>
+    {%- endfor %}
+      </div>
+    </div></div>
+  {%- endfor %}
+
+{%- endblock %}

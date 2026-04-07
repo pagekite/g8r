@@ -5,6 +5,7 @@ export PATH="$(pwd):$(pwd)/tools:$PATH"
 
 HOSTS="$*"
 RAW_METRICS="${RAW_METRICS:-n}"
+LIVE_METRICS="${RAW_METRICS:-y}"
 
 FILTERS="${FILTERS:-g8r}"
 [ "$FILTERS" = '*' ] && FILTERS=""
@@ -27,16 +28,29 @@ if [ "$HOSTS" = "" ]; then
     fi
 fi
 
-[ "$RAW_METRICS" != "n" ] || echo -n '{'
-for h in $HOSTS; do
+[ "$RAW_METRICS" != "n" ] || echo -n '{"metrics": {'
+(for h in $HOSTS; do
+    RAW_CACHE=tree/status/host-"$h".omtxt
+    if [ "$LIVE_METRICS" != "y" -a -e "$RAW_CACHE" ]; then
+        SRC="$RAW_CACHE"
+    else
+        LIVE_METRICS=y
+        SRC="$h:1987"
+    fi
+
     if [ "$RAW_METRICS" != "n" ]; then
         echo "# Metrics from $h"
-        curl -s "http://governator:${g8r_metrics_secret}@$h:1987/metrics"
+        if [ "$LIVE_METRICS" != "y" ]; then
+            cat "$RAW_CACHE"
+        else
+            curl -s "http://governator:${g8r_metrics_secret}@$h:1987/metrics" \
+               |tee "$RAW_CACHE"
+        fi
         echo
     else
-        metrics_to_json.py "$h:1987" \
+        metrics_to_json.py $SRC \
             -w "$h" -u governator -p "${g8r_metrics_secret}" \
             $FILTERS
     fi
-done
-[ "$RAW_METRICS" != "n" ] || echo '"EOF":1}'
+done) |sed -e '$,$s/,$//'
+[ "$RAW_METRICS" != "n" ] || echo '}}'

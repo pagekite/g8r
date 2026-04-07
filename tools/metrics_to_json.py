@@ -146,6 +146,10 @@ if __name__ == '__main__':
 
     else:
         url = args.pop(0)
-        if not url.startswith('http'):
-            url = "http://%s/metrics" % (url,)
-        print(fetch_openmetrics_as_json(url, args, **kwargs))
+        if os.path.exists(url):
+            with open(url, 'r') as fd:
+                print(openmetrics_as_json(fd.read(), args))
+        else:
+            if not url.startswith('http'):
+                url = "http://%s/metrics" % (url,)
+            print(fetch_openmetrics_as_json(url, args, **kwargs))

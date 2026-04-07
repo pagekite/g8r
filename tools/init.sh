@@ -95,8 +95,9 @@ mcheck() {
     fi
 }
 mcheck "make             " "$(which make)"
-mcheck "python3          " "$(which python3)"
 mcheck "htpasswd         " "$(which htpasswd)"
+mcheck "python3          " "$(which python3)"
+mcheck "rsync            " "$(which rsync)"
 mcheck "python: jinja2   " "$(python3 -c 'import jinja2; print("ok")' 2>/dev/null)"
 mcheck "python: markdown " "$(python3 -c 'import markdown; print("ok")' 2>/dev/null)"
 mcheck "python: yaml     " "$(python3 -c 'import yaml; print("ok")' 2>/dev/null)"
@@ -223,7 +224,7 @@ echo "** OK: Created $ADDED_DOMAIN_DIR" >&2
 
 # Create g8r-tools bundle in exposed/files
 echo >&2
-tar cfz exposed/files/g8r-tools.tar.gz g8r tools/*.py tools/{metrics,healthy}.sh
+tar cfz exposed/files/g8r-tools.tar.gz g8r tools/*.py tools/{metrics,healthy,fragment-run}.sh
 echo "** OK: Created: $(ls -1hs exposed/files/g8r-tools.tar.gz)" >&2
 
 

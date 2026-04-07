@@ -43,6 +43,7 @@ chmod +x *.sh
 #
 cd /var/lib/g8r/scripts
 for script in $(ls -1 1*.sh |sort); do
+    export G8R_FRAGMENT=update
     /bin/g8r run "${script}"
 done
 

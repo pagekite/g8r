@@ -1,4 +1,54 @@
 #!/bin/bash
+export G8R_PING_URL="{{ g8r_url_base }}/events/"
+export G8R_SCRIPTS=/var/lib/g8r/scripts
+export G8R_BACKUPS=/var/lib/g8r/backups
+export LC_ALL=C
+export LANG=C
+set -x
+set -e
 
+curl -s "${G8R_PING_URL}?cron_hourly={{ host_g8r_secret }}" || true
+
+NOW="${NOW:-$(date +'d%dh%H')}"
+HOUR="${HOUR:-$(date +'h%H')}"
+
+
+#############################################################################
+{%-  if host_backups|default(0) %}
+{%-   set tgz_backups = [] %}
+{%-   for b in host_backups.split() %}
+{%-     set tt = b.split(':', 1) %}
+{%-     if tt[0] == 'tgz' and tt[1] != 'auto' %}
+{%-       set x = tgz_backups.append(tt[1]) %}
+{%-     endif %}
+{%-   endfor %}
+{%-   set tgz_backups = ' '.join(tgz_backups) %}
+#
+# These are our basic .tgz backups.
+# We generate one per day at 5am, and keep at most 7 of them around.
+#
+if [ "$HOUR" = "h05" ]; then
+    cd /
+    mkdir -p ${G8R_BACKUPS}
+    find ${G8R_BACKUPS} -name \*.tgz -mtime 7 -exec rm -vf \{\} \;
+
+    TGZ_BACKUPS="{{ tgz_backups }}"
+    for SCRIPT in $(g8r ls); do
+        G8R_TGZ_BACKUPS=""
+        source <(fragment-run.sh "$G8R_SCRIPTS/$SCRIPT" BACKUPS)
+        TGZ_BACKUPS="$G8R_TGZ_BACKUPS $TGZ_BACKUPS"
+    done
+
+    if [ "$(echo $TGZ_BACKUPS)" != "" ]; then
+        tar cvfz ${G8R_BACKUPS}/backups-${NOW}.tgz $TGZ_BACKUPS \
+          || rm -f ${G8R_BACKUPS}/backups-${NOW}.tgz \
+
+        [ -e "${G8R_BACKUPS}/backups-${NOW}.tgz" ] \
+          && curl -s "${G8R_PING_URL}?backup_ready={{ host_g8r_secret }}" \
+          || true
+    fi
+fi
+{%- else %}# No backups configured. See: g8r help backups
+{%- endif %}
 
 # EOF

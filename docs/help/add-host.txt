@@ -4,13 +4,25 @@ Add a new host to your Governator for management.
 
 The `host_type` must match one of the directories in `tree/skeletons/`.
 
-Set the environment variables IPv4 and/or IPv6 first if you already know the
-public IPs of this host.
+Set the environment variables `IPv4` and/or `IPv6` first if you already
+know the public IPs of this host.
+
+To enable backups, set the `BACKUPS` variable. It should be a list of
+words describing what we back up. See `g8r help backups` for details on
+what backups schemes are supported.
+
+By default, hosts are configured for automatic package upgrades once
+every two weeks and automatic reboots once per month. To disable this,
+set `UPDATES=n`.
 
 Examples:
 
     g8r add-domain www web
+
     g8r add-domain www web example.org
 
     IPv4=10.1.2.3 IPv6=::1 g8r add-domain www web
 
+    export UPDATES=n
+    export BACKUPS="tgz:/var/lib/special-data rsync:users rsync:/var/log"
+    g8r add-domain www web

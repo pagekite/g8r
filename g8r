@@ -95,13 +95,7 @@ case "$COMMAND" in
 
     healthchk)
         cd "${G8R_HOME}" || exit 1
-        G8R_S_PATH="${G8R_HOME}/scripts/$1"
-        if [ -x "$G8R_S_PATH" ]; then
-            sed -e '/HEALTH_CHECK_CUT_HERE/,$ p; d' <"$G8R_S_PATH"| bash
-        else
-            echo "Not found: $G8R_S_PATH" >&2
-            exit 1
-        fi
+        fragment-run.sh "${G8R_HOME}/scripts/$1" HEALTH_CHECK
         ;;
 
     run)
@@ -134,12 +128,16 @@ case "$COMMAND" in
         ;;
 
     *|help)
+        PAGER=$(which less && echo '-XF')
+        [ "$PAGER" = "" ] && PAGER=$(which more)
+        [ "$PAGER" = "" ] && PAGER=cat
         G8R=$(basename $0)
         if [ "$COMMAND" = "help" -a "$1" != "" ]; then
-            cat "${G8R_HOME}/docs/help/$1.txt" 2>/dev/null && exit 0
+            cat "${G8R_HOME}/docs/help/$1.txt" |$PAGER 2>/dev/null && exit 0
             echo "Oops! Topic not found: $1"
             echo "-------------------------- -- --- - - -- -- -  -"
         fi
+        (
         cat <<tac
 Usage: g8r <command> [...]
 
@@ -180,5 +178,6 @@ Try \`$G8R help <command>\` (e.g. \`$G8R help add-host\`) to learn more.
 
 [G8R_HOME=$G8R_HOME]
 tac
+        )|$PAGER
         exit 99
 esac

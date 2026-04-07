@@ -29,6 +29,7 @@ Variable definitions and input/output rendering pairs can be mixed and
 matched and will be processed in order.
 """
 import copy
+import datetime
 import hashlib
 import jinja2
 import jinja2.utils
@@ -45,6 +46,23 @@ from markdown import markdown
 # Used to auto-add <a name=...> to headings.
 HEADINGS_RE = re.compile(r'(<[Hh]\d+[^>]*>)([^>]*)(</[Hh]\d+>)', flags=re.S)
 AUTO_TOC_RE = re.compile(r'<!-- TOC: ((?:[Hh]\d+\s*)*) *-->', flags=re.S)
+
+# This lets us spy on which files get opened, for calculating dependencies.
+REAL_OPEN = open
+OPENED_FILES = set()
+
+def open(fn, *args, **kwargs):
+    global OPENED_FILES
+    try:
+        rv = REAL_OPEN(fn, *args, **kwargs)
+        OPENED_FILES.add(os.path.abspath(fn))
+        return rv
+    except:
+#       sys.stderr.write('Failed to open: %s\n' % fn)
+        raise
+
+jinja2.open = open
+jinja2.utils.open = open
 
 
 def toc_friendly_markdown(text):
@@ -94,24 +112,6 @@ def toc_friendly_markdown(text):
     return mtext
 
 
-# This lets us spy on which files get opened, for calculating dependencies.
-REAL_OPEN = open
-OPENED_FILES = set()
-
-def open(fn, *args, **kwargs):
-    global OPENED_FILES
-    try:
-        rv = REAL_OPEN(fn, *args, **kwargs)
-        OPENED_FILES.add(os.path.abspath(fn))
-        return rv
-    except:
-#       sys.stderr.write('Failed to open: %s\n' % fn)
-        raise
-
-jinja2.open = open
-jinja2.utils.open = open
-
-
 # A Jinja extension which gives us shell commands, markdown and json processing
 class JinjaToolExtension(Extension):
     def __init__(self, env):
@@ -124,6 +124,7 @@ class JinjaToolExtension(Extension):
         env.filters['min'] = self._min
         env.filters['hash'] = self._hash
         env.filters['date'] = self._date
+        env.filters['cal'] = self._cal
         env.filters['set'] = self._set
         env.filters['without'] = self._without
         env.filters['markdown'] = self._markdown
@@ -131,6 +132,7 @@ class JinjaToolExtension(Extension):
         env.filters['from_json'] = self._from_json
         env.filters['from_rfc822'] = self._from_rfc822
         env.filters['from_vars_txt'] = self._from_vars_txt
+        env.filters['from_metrics'] = self._from_metrics
 
     def _bash(self, data=None, command=None):
         if (data is not None) and (command is None):
@@ -193,6 +195,43 @@ class JinjaToolExtension(Extension):
         except (OSError, IOError, subprocess.CalledProcessError):
             return data
 
+    def _cal(self, date_map):
+        def _dt(key):
+            return datetime.datetime(*(int(k) for k in key.split('-')))
+
+        details = {}
+        first = None
+        for key in sorted(list(date_map.keys())):
+            dt = _dt(key)
+            if first is None:
+                first = dt
+            details[dt] = date_map[key]
+
+        cur = first
+        mon = first.month
+        cal = [cur.strftime('%B\n')]
+        one = datetime.timedelta(days=1)
+        while cur.day > 1:
+            cur -= one
+        while cur.isoweekday() > 1:
+            cur -= one
+        while True:  #details or (cur.isoweekday() < 7):
+            cal.append('%2s' % (cur.day if cur.month >= mon else ' '))
+            if cur in details:
+                cal[-1] = '<b class="ev" title="%s">%s</b>' % (details[cur], cal[-1])
+                del details[cur]
+            if cur.isoweekday() == 7:
+                cal.append('\n')
+            cur += one
+            if cur.month != mon and cur >= first:
+                if not details:
+                    break
+                mon = cur.month
+                cal.append(cur.strftime('\n\n%B\n'))
+                cal.extend(['  '] * (cur.isoweekday()-1))
+
+        return (' '.join(cal)).replace(' \n', '\n')
+
     def _set(self, data, field, var):
         d = copy.copy(data)
         d[field] = var
@@ -240,9 +279,21 @@ class JinjaToolExtension(Extension):
 
     def _from_vars_txt(self, data):
         vdict = {}
+        for line in (data or '').splitlines():
+            line = line.split('#', 0).strip()
+            if '=' not in line:
+                continue
+            var, val = line.split('=', 1)
+            vdict[var.strip()] = val.strip().strip('"')
+        return vdict
+
+    def _from_metrics(self, data):
+        vdict = {}
         if data:
             for line in data.splitlines():
-                var, val = [v.strip() for v in line.split(':', 1)]
+                if not line.strip():
+                    continue
+                var, val = [v.strip() for v in line.split('=', 1)]
                 val = val.strip('"')
                 try:
                     if ' ' in val:

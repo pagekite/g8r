@@ -1,9 +1,11 @@
 tree/**/*.sh
+tree/status/**
 tmp/
 exposed/files/**
 venv
 __pycache__
 .depend
 .depend.up
+*.html
 *.pyc
 *~

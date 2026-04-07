@@ -8,7 +8,6 @@ export LANG=C
 set -x
 set -e
 
-
 #############################################################################
 # Install caddy as a static file server and reverse proxy
 #
@@ -28,24 +27,27 @@ mkdir -p {{ fqdn }}
 touch {{ fqdn }}/index.html
 echo 'OK' >{{ fqdn }}/.healthy.txt
 
-{% for site in g8r_all_domains %}{%- if site.static %}{% if site.domain %}
- {%- if host_name in site.hosts|default([host_name]) %}
-  {%- if site.reset %}
-rm -rf "{{ site.domain }}"
+{% for domain, svc in g8r_service_domains.items() %}{%- if svc.web_static_git %}
+ {%- if host_name in svc.hosts|default([host_name]) %}
+  {%- if svc.web_reset %}
+rm -rf "{{ domain }}"
   {%- endif %}
-if [ -d "{{ site.domain }}" ]; then
-    (cd "{{ site.domain }}" && git pull)
+if [ -d "{{ domain }}" ]; then
+    (cd "{{ domain }}" && git pull)
 else
-    git clone "{{ site.static }}" "{{ site.domain }}"
+    git clone "{{ svc.web_static_git }}" "{{ domain }}"
 fi
-echo 'OK' >{{ site.domain }}/.healthy.txt
-{% endif %}{% endif %}{% endif %}{% endfor %}
+echo 'OK' >{{ domain }}/.healthy.txt
+{% endif %}{% endif %}{% endfor %}
 
 chmod go-rwx /var/lib/www-static/*/.git || true
 
 
 #############################################################################
 # Configure caddy
+#
+# Note: Logs are included in our backups by default, thus the relatively low
+#       retention policies.
 #
 cat <<tac >/etc/caddy/Caddyfile
 {
@@ -54,31 +56,34 @@ cat <<tac >/etc/caddy/Caddyfile
 }
 
 {% set sites = [] -%}
-{% for site in g8r_all_domains %}
- {%- if host_name in site.hosts|default([host_name]) %}
-  {%- if site.redirect %}
+{% for domain, svc in g8r_service_domains.items() %}
+ {%- if host_name in svc.hosts|default([host_name]) %}
+  {%- if svc.web_redirect %}
 
-{% if not site.caddy_tls|default(0) %}http://{% endif %}{{ site.domain }} {
-   redir {{site.redirect}}
+{% if not svc.caddy_tls|default(0) %}http://{% endif %}{{ domain }} {
+   redir {{ svc.web_redirect }}
 }
-  {%- elif site.static or site.proxy %}{% set r = sites.append(site.domain) %}
-{% if not site.caddy_tls|default(0) %}http://{% endif %}{{ site.domain }} {
+  {%- elif svc.web_static_git or svc.web_proxy %}{% set r = sites.append(domain) %}
+{% if not svc.caddy_tls|default(0) %}http://{% endif %}{{ domain }} {
   log {
-    output file /var/log/caddy/access-{{ site.domain }}.log
+    output file /var/log/caddy/access-{{ domain }}.log {
+      roll_at 00:00
+      roll_keep_for 72h
+    }
   }
 
   # Forced Downloads
   @downloads path_regexp \.(py|pdf|go|gz|xz|tgz|deb|rpm|exe|msi|sig)$
   header @downloads Content-Disposition "attachment"
 
-  {%- if site.proxy %}
+  {%- if svc.web_proxy %}
   @not_static {
-    not path {{ site.static_paths|default('/no/static/paths/defined') }}
+    not path {{ svc.web_static_paths|default('/no/static/paths/defined') }}
   }
-  reverse_proxy @not_static {{ site.proxy }}
+  reverse_proxy @not_static {{ svc.web_proxy }}
   {%- endif %}
 
-  root * {{ site.static_dir|default('/var/lib/www-static/' + site.domain) }}
+  root * {{ svc.web_static_dir|default('/var/lib/www-static/' + domain) }}
   file_server
 }
   {%- endif %}
@@ -87,7 +92,10 @@ cat <<tac >/etc/caddy/Caddyfile
 {%- if fqdn not in sites %}
 http://{{ fqdn }} {
   log {
-    output file /var/log/caddy/access-{{ fqdn }}.log
+    output file /var/log/caddy/access-{{ fqdn }}.log {
+      roll_at 00:00
+      roll_keep_for 72h
+    }
   }
 
   root * /var/lib/www-static/{{ fqdn }}/
@@ -104,7 +112,7 @@ systemctl reload caddy || systemctl start caddy
 /var/lib/g8r/tools/metrics.sh caddy_health0 caddy_health0 gauge $(date +%s)
 
 
-###################################################[HEALTH_CHECK_CUT_HERE]###
+###################################################[BEGIN_G8R_HEALTH_CHECK]###
 # Mark the service healthy, if it is indeed healthy.
 # This must come last, so `g8r healthchk` can run.
 #
@@ -117,11 +125,11 @@ if [ "$(curl -sk --resolve '{{ fqdn }}:80:127.0.0.1' \
     HEALTHY=n
 fi
 
-{% for site in g8r_all_domains %}
-  {%- if site.static %}
-URL={% if not site.caddy_tls|default(0) %}http://{% else %}https://{% endif %}{{ site.domain }}
-if [ "$(curl -sk --resolve '{{ site.domain }}:443:127.0.0.1' \
-                 --resolve '{{ site.domain }}:80:127.0.0.1' \
+{% for domain, svc in g8r_service_domains.items() %}
+  {%- if svc.web_static_git %}
+URL={% if not svc.caddy_tls|default(0) %}http://{% else %}https://{% endif %}{{ domain }}
+if [ "$(curl -sk --resolve '{{ domain }}:443:127.0.0.1' \
+                 --resolve '{{ domain }}:80:127.0.0.1' \
           $URL/.healthy.txt)" != "OK" ]; then
     HEALTHY=n
 fi
@@ -135,5 +143,21 @@ else
     # been continuously healthy.
     /var/lib/g8r/tools/metrics.sh caddy_health0 caddy_health0 gauge $(date +%s)
 fi
+#####################################################[END_G8R_HEALTH_CHECK]###
+exit 0
+
+
+######################################################[ BEGIN_G8R_BACKUPS ]###
+#
+# This is our backup script.
+# We like to keep backups of the web logs, but we prune old data first.
+#
+find /var/log/caddy -type f -name \*.log -mtime 7 -exec rm -f \{\} \;
+
+# Tell g8r to add the Caddy logs to the .tgz backup.
+# We have taken care above to avoid this being too much data at once.
+echo "G8R_TGZ_BACKUPS=/var/log/caddy/"
+
+#END_G8R_BACKUPS#
 
 #EOF#
