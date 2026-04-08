@@ -143,8 +143,10 @@ else
     # been continuously healthy.
     /var/lib/g8r/tools/metrics.sh caddy_health0 caddy_health0 gauge $(date +%s)
 fi
-#####################################################[END_G8R_HEALTH_CHECK]###
-exit 0
+#END_G8R_HEALTH_CHECK#
+
+
+exit 0  # ##[ End of normal script, only fragments follow ]###################
 
 
 ######################################################[ BEGIN_G8R_BACKUPS ]###

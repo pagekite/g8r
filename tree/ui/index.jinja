@@ -2,9 +2,6 @@
 
 {%- set page = {'title': g8r_governating_domain} %}
 {%- set host_status = cat('../status/summary.json')|from_json %}
-{%- set dummy_schedule = {
-  '2026-04-06': '6am: A restarting thing',
-  '2026-04-15': '4am: Other thing'} %}
 {%- set dummy_backups = {
   'how': 'rsync',
   'when': 'today',
@@ -59,6 +56,7 @@ g8r:
       </tr>
     {%- for hostname in domjson.g8r_hosts %}
       {%- set hostjson = domjson.g8r_hosts[hostname] %}
+      {%- set hostsched = domjson.g8r_update_schedule.get(hostname) %}
       {%- set hoststat = host_status.get(hostjson.secret, {}) %}
       <tr class='host'>
         <td class='host-healthy {% if not hoststat.healthy %}un{% endif %}healthy'>
@@ -89,7 +87,7 @@ g8r:
           {%- endif %}{% endfor %}</p>
         </td>
         <td class='host-schedule'><pre class=details>
-          {{- dummy_schedule|cal|safe -}}
+          {%- if hostsched %}{{ hostsched|schedule|cal|safe }}{% endif -%}
         </pre><p class="placeholder">...</p></td>
         <td class='host-backups'>
           <p>{{ dummy_backups.when }}</p>

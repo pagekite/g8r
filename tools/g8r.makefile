@@ -7,7 +7,7 @@
 JINJATOOL_VARS = g8r
 JINJATOOL_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 JINJATOOL := $(abspath $(JINJATOOL_ROOT)/../tools)/jinjatool.py
-MP_RFC822 ?= $(shell find . -name template.md-jinja |head -1)
+MP_RFC822 ?= $(abspath $(shell find . -name template.md-jinja |head -1))
 
 MAKE = make JINJATOOL_ROOT=$(JINJATOOL_ROOT) JINJATOOL_VARS=$(JINJATOOL_VARS) JINJATOOL=$(JINJATOOL) MP_RFC822=$(MP_RFC822) \
             -f $(word 1,$(MAKEFILE_LIST)) --no-print-directory

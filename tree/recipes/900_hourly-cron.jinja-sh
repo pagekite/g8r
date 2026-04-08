@@ -9,11 +9,23 @@ set -e
 
 curl -s "${G8R_PING_URL}?cron_hourly={{ host_g8r_secret }}" || true
 
-NOW="${NOW:-$(date +'d%dh%H')}"
-HOUR="${HOUR:-$(date +'h%H')}"
+NOW="${NOW:-$(date +'d%dh%H')}"       # Day of month, hour
+WNOW="${WNOW:-$(date +'W%Ww%wh%H')}"  # Week, Day of week (1=Monday), hour
+WDAY="${WDAY:-$(date +'w%wh%H')}"     # Day of week, hour
+HOUR="${HOUR:-$(date +'h%H')}"        # Hour only
 
 
-#############################################################################
+##############################################################################
+# If we've been up and running for less than 1.5 hours, assume we recently
+# got rebooted and request an undrain.
+#
+let UPTIME=$(date +%s)-$(date +%s --date "$(uptime -s)")
+if [ "$UPTIME" -lt 5400 ]; then
+    curl -s "${G8R_PING_URL}?undrain={{ host_g8r_secret }}" || true
+fi
+
+
+##############################################################################
 {%-  if host_backups|default(0) %}
 {%-   set tgz_backups = [] %}
 {%-   for b in host_backups.split() %}
@@ -50,5 +62,69 @@ if [ "$HOUR" = "h05" ]; then
 fi
 {%- else %}# No backups configured. See: g8r help backups
 {%- endif %}
+
+
+##############################################################################
+{%- set sinfo = cat('800_update-schedule.json')|from_json %}
+{%- set schedule = sinfo.get('g8r_update_schedule', {}).get(host_name, 0) %}
+{%- if schedule %}
+#
+# These are scheduled updates; package updates, OS reboots and service
+# restarts are scheduled for specific days and times.
+#
+# These run after any schedule backups, so backups don't get interrupted by
+# restarts or reboots.
+#
+for t in $NOW $WNOW $WDAY; do
+  case "$t" in
+{%-   for timespec, act in schedule.items() %}
+{%-     set running = act[0] %}
+{%-     if running in ('UPGRADE', 'RESTART', 'REBOOT') %}
+    {{ timespec }}) fragment-run.sh "$G8R_SCRIPTS/900_hourly-cron.sh" {{ running }}
+{%-     else %}
+    {{ timespec }}) {{ running }}
+{%-     endif %}
+        ;;
+{%-   endfor %}
+  esac
+done
+{%- else %}# No scheduledu updates configured. See: g8r help schedule
+{%- endif %}
+
+
+exit 0  # ##[ End of normal script, only fragments follow ]###################
+
+
+########################################################[BEGIN_G8R_UPGRADE]###
+# This is the upgrade fragment
+#
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
+
+#END_G8R_UPGRADE#
+
+
+########################################################[BEGIN_G8R_RESTART]###
+# This is the restart fragment
+#
+curl -s "${G8R_PING_URL}?drain={{ host_g8r_secret }}" || true
+sleep 1800
+for SCRIPT in $(g8r ls); do
+    fragment-run.sh "$G8R_SCRIPTS/$SCRIPT" "RESTART"
+done
+curl -s "${G8R_PING_URL}?undrain={{ host_g8r_secret }}" || true
+
+#END_G8R_RESTART#
+
+
+#########################################################[BEGIN_G8R_REBOOT]###
+# This is the reboot fragment
+#
+curl -s "${G8R_PING_URL}?drain={{ host_g8r_secret }}" || true
+shutdown -r +30
+
+#END_G8R_REBOOT#
+
 
 # EOF

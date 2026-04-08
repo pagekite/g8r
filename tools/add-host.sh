@@ -28,12 +28,16 @@ mkdir -p "$DIR" || exit 2
 cd "$DIR"
 DIR="$(pwd)"
 
+HOST_INDEX=$(cd ..; ls -1 */host.json |wc -l)
+
 cp -a "../../skeletons/${HOST_TYPE}/." .
 cat <<tac >g8r.vars
 host_name=${HOST_NAME}
 host_type=${HOST_TYPE}
+host_index=${HOST_INDEX}
 host_ipv4=$IPv4
 host_ipv6=$IPv6
+host_updates="${HOST_UPDATES:-default}"
 host_backups="${BACKUPS:-tgz:auto}"
 host_g8r_secret=${HOST_SECRET}
 tac

@@ -1,0 +1,56 @@
+{# Our default update schedule is 4 events per month, 7 days apart.
+ # We pretend all months are February and never schedule anything for
+ # days 29, 30 and 31.
+ #
+ # The hour updates run depends on the time-zone of the server.
+ #
+ #}
+{%- set update_hour = host_updates_hour|default(6) %}
+{%- set update_weekly = host_updates_weekly|default(0)|int %}
+{%- if host_updates in ('default', 'DEFAULT') %}
+{%-   set host_updates = 'UPGRADE RESTART UPGRADE REBOOT' %}
+{%- endif %}
+{%- set explain = {
+        "DRAIN": "Drain traffic",
+        "UPGRADE": "Install all available OS package upgrades (security updates)",
+        "RESTART": "Restart services",
+        "REBOOT": "Reboot server"}
+-%}
+{%- set monthly_update_starts = [
+         1, 18, 11, 23,
+         7,  0, 12,  2,
+         9, 20, 13, 25,
+         6, 21, 14, 26,
+         3, 22, 15, 27,
+         4, 19, 16,  8,
+        24,  5, 17, 10]
+-%}
+{%- set update_day = [monthly_update_starts[host_index|default(0)|int]] %}
+{%- set schedule = ( host_updates|default('') ).strip().split() %}
+{
+  "g8r_update_schedule": {
+    "{{ host_name }}": {
+{%-  if update_weekly %}
+{%-    set step = update_weekly * schedule|length %}
+{%-    set steps = (52 / step)|int %}
+{%-    set weekday = 1 + ((host_index|default(0)|int) % 5) %}
+{%-    for week in range(steps) %}
+{%-      set week = [week * step] %}
+{%-      set last_week = loop.last %}
+{%-      for update in schedule %}
+      "{{ "W%2.2dw%d"|format(week[-1], weekday) }}h{{ "%2.2d"|format(update_hour) }}": ["{{ update }}", "{{ explain.get(update, update) }}"]
+      {%- if not (last_week and loop.last) %},{% endif %}
+{%-        set a = week.append(week[-1] + update_weekly) %}
+{%-      endfor %}
+{%-    endfor %}
+{%-  else %}
+{%-    set step = (28 / schedule|length)|int %}
+{%-    for update in schedule %}
+      "{{ "d%2.2d"|format(update_day[-1] + 1) }}h{{ "%2.2d"|format(update_hour) }}": ["{{ update }}", "{{ explain.get(update, update) }}"]
+      {%- if not loop.last %},{% endif %}
+{%-      set a = update_day.append((update_day[-1] + step) % 28) %}
+{%-    endfor %}
+{%-  endif %}
+    }
+  }
+}

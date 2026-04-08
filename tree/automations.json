@@ -48,6 +48,25 @@
       },
       "write": ["$GROUP/g8r.json"],
       "emit_events": ["REBUILD"]
+    },
+    {
+      "pre_conditions": {},
+      "group_by": ["tree/hosts-*"],
+      "read": ["$GROUP/*/800_update-schedule.json"],
+      "map": {
+        "g8r_update_schedule": "g8r_update_schedule"
+      },
+      "write": ["$GROUP/g8r.json"],
+      "emit_events": ["REBUILD"]
+    },
+    {
+      "pre_conditions": {},
+      "read": ["tree/status/host-*.json"],
+      "map": {
+        "metrics": "metrics"
+      },
+      "write": ["tree/status/summary.json"],
+      "emit_events": ["REBUILD"]
     }
   ],
 

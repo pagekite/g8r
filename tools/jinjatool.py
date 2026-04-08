@@ -125,6 +125,7 @@ class JinjaToolExtension(Extension):
         env.filters['hash'] = self._hash
         env.filters['date'] = self._date
         env.filters['cal'] = self._cal
+        env.filters['schedule'] = self._schedule
         env.filters['set'] = self._set
         env.filters['without'] = self._without
         env.filters['markdown'] = self._markdown
@@ -206,6 +207,8 @@ class JinjaToolExtension(Extension):
             if first is None:
                 first = dt
             details[dt] = date_map[key]
+        if first is None:
+            first = datetime.datetime.now()
 
         cur = first
         mon = first.month
@@ -215,7 +218,7 @@ class JinjaToolExtension(Extension):
             cur -= one
         while cur.isoweekday() > 1:
             cur -= one
-        while True:  #details or (cur.isoweekday() < 7):
+        while True:
             cal.append('%2s' % (cur.day if cur.month >= mon else ' '))
             if cur in details:
                 cal[-1] = '<b class="ev" title="%s">%s</b>' % (details[cur], cal[-1])
@@ -231,6 +234,31 @@ class JinjaToolExtension(Extension):
                 cal.extend(['  '] * (cur.isoweekday()-1))
 
         return (' '.join(cal)).replace(' \n', '\n')
+
+    def _schedule(self, schedule, days=35, month=True, week=False):
+        one = datetime.timedelta(days=1)
+        cur = datetime.datetime.now()
+        if week:
+            while cur.weekday() > 0:
+                cur -= one
+        elif month:
+            while cur.day > 1:
+                cur -= one
+
+        expanded = {}
+        for i in range(days):
+            day = cur.strftime('d%d')
+            wday = cur.strftime('w%w')
+            week = cur.strftime('W%Ww%w')
+            for s in schedule:
+                if s.startswith(day) or s.startswith(wday) or s.startswith(week):
+                    event = '%s: %s' % (s[-3:], schedule[s][1])
+                    expanded[cur.strftime('%Y-%m-%d')] = event
+            cur += one
+            if month and cur.day == 1:
+                break
+
+        return expanded
 
     def _set(self, data, field, var):
         d = copy.copy(data)
@@ -280,7 +308,7 @@ class JinjaToolExtension(Extension):
     def _from_vars_txt(self, data):
         vdict = {}
         for line in (data or '').splitlines():
-            line = line.split('#', 0).strip()
+            line = line.split('#')[0].strip()
             if '=' not in line:
                 continue
             var, val = line.split('=', 1)
