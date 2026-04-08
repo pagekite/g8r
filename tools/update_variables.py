@@ -70,12 +70,20 @@ class VaryVariables:
     def check_preconditions(self, rule):
         return True  # FIXME
 
-    def glob_filenames(self, filespecs, group=None):
+    def glob_filenames(self, filespecs, group=None, create=False):
+        yielded = 0
         for filespec in sorted(filespecs):
             if group:
                 filespec = filespec.replace('$GROUP', group)
             for fn in sorted(glob.glob(filespec)):
                 yield fn
+                yielded += 1
+        if create and not yielded:
+            for filespec in sorted(filespecs):
+                if '*' not in filespec and '?' not in filespec:
+                    if group:
+                        filespec = filespec.replace('$GROUP', group)
+                    yield filespec
 
     def groups(self, rule):
         yielded = 0
@@ -108,10 +116,13 @@ class VaryVariables:
 
     def update(self, rule, group, inputs):
         changed = []
-        for fn in self.glob_filenames(rule['write'], group):
+        for fn in self.glob_filenames(rule['write'], group, create=True):
             try:
                 with open(fn, 'r') as fd:
                     data = json.loads(fd.read())
+            except OSError:
+                data = {}
+            try:
                 changing = False
                 for iv, ov in sorted(list(rule['map'].items())):
                     if iv not in inputs:
