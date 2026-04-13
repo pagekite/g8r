@@ -52,6 +52,11 @@ try:
 except ImportError:
     from jinja2 import Markup
 
+try:
+    from jinja2 import pass_context
+except ImportError:
+    from jinja2 import contextfunction as pass_context
+
 
 # Default list of files to load (in order) for variables
 JINJATOOL_DEFAULT_VARS = 'jinjatool.vars:jinjatool.json'
@@ -125,7 +130,7 @@ def toc_friendly_markdown(text):
     return mtext
 
 
-@jinja2.pass_context
+@pass_context
 def get_all_vars(context, prefixes=None):
     """Returns a dictionary of all variables currently in scope"""
     def _check(k):

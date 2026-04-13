@@ -40,7 +40,7 @@
         "manifest_tool1_latest": "tool1_version",
         "manifest_tool2_latest": "tool2_version"
       },
-      "write": ["/tree/canaries/web-*/009_automation.json"],
+      "write": ["tree/canaries/web-*/009_automation.json"],
       "emit_events": ["REBUILD"]
     },
     {

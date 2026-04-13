@@ -38,15 +38,17 @@ DEBUG = os.getenv('G8R_DEBUG', False)
 
 class VaryVariables:
     def __init__(self, path_to_config):
+        g8r_home = os.getenv('G8R_HOME') or DEFAULT_G8R_HOME
         if not path_to_config:
-            g8r_home = os.getenv('G8R_HOME') or DEFAULT_G8R_HOME
             path_to_config = os.path.join(g8r_home, 'tree', DEFAULT_CONFIG_FILE)
         self.path_to_config = path_to_config
 
         self.config = {}
         self.rules = []
         self.load_config()
-        os.chdir(os.path.join(os.path.dirname(__file__), '..'))
+        os.chdir(g8r_home)
+        if DEBUG:
+            self.stdout('G8R_HOME=%s' % (g8r_home))
 
     def my_time(self, ts):
          return datetime.datetime.fromtimestamp(ts).strftime("%A %B %Y-%m-%d %Hh%Mm%Ss")

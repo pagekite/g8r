@@ -1,8 +1,8 @@
 #!/bin/bash
 [ "${G8R_DEBUG:-n}" != "n" ] && set -x
-cd "$(dirname $0)/.."
+G8R_HOME="${G8R_HOME:-$(cd $(dirname $0)/.. && pwd)}"
+cd "$G8R_HOME"
 export PATH="$(pwd):$(pwd)/tools:$PATH"
-G8R_HOME="$(pwd)"
 set -e
 
 if [ "$1" = "" ]; then

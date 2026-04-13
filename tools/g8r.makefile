@@ -7,13 +7,13 @@
 JINJATOOL_VARS = 000_base.vars:001_config.yml:002_config.json:009_automation.json
 JINJATOOL_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 JINJATOOL := $(abspath $(JINJATOOL_ROOT)/../tools)/jinjatool.py
-MP_RFC822 ?= $(abspath $(shell find . -name template.md-jinja |head -1))
+MP_RFC822 ?= $(abspath $(shell find -L . -name template.md-jinja |head -1))
 
 MAKE = make JINJATOOL_ROOT=$(JINJATOOL_ROOT) JINJATOOL_VARS=$(JINJATOOL_VARS) JINJATOOL=$(JINJATOOL) MP_RFC822=$(MP_RFC822) \
             -f $(word 1,$(MAKEFILE_LIST)) --no-print-directory
 EXCLUDE = grep -v -e /bin/ -e /canaries/ -e /hosts/ -e /skeletons/ -e /recipes/
 MAKE_ONLY ?= cat
-TARGETS = find . -name \*.jinja* -o -name \*.md \
+TARGETS = find -L . -name \*.jinja* -o -name \*.md \
             |$(MAKE_ONLY) |$(EXCLUDE) \
             |grep -v -e '.swp$$' -e '.py$$' -e '~$$' -e 'README.md' -e 'PLAN.md' |sort \
             |sed -e 's/md$$/html/g' \

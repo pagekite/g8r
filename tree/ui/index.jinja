@@ -95,9 +95,9 @@
           {%- endif %}
         </td>
         <td class='host-name'>
-          <label title='Click to expand / collapse details'
+          <label title='{{ hostname }}.{{ domcfg.host_domain }} :: Click to expand / collapse details'
                  for="host-toggle-{{ domidx }}-{{ loop.index }}" class="toggle-label">
-            {{ hostname }}.{{ domcfg.host_domain }}
+            {{ hostname }}
           </label>
         </td>
         <td class='host-ips'>
