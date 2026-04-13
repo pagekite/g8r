@@ -76,7 +76,7 @@
       {%- set hostsched = domcfg.get('g8r_update_schedule', {}).get(hostname) %}
       {%- set hosthealth = metrics.get('metrics', {}).get(hostfqdn, {})|health %}
       {%- set hoststat = status.get('status', {}).get(hostjson.secret, {}) %}
-      {%- set hostbkup = backups.g8r_backups.get(hostjson.secret, {}).get('TOTALS', {}) %}
+      {%- set hostbkup = backups.get('g8r_backups', {}).get(hostjson.secret, {}).get('TOTALS', {}) %}
       {%- set a = host_fqdn_map.__setitem__(hostjson.secret, hostfqdn) %}
       <tr class='host'>
         <td class='host-healthy {% if not hosthealth.healthy %}un{% endif %}healthy'>
