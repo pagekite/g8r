@@ -40,7 +40,10 @@ fi
 echo 'OK' >{{ domain }}/.healthy.txt
 {% endif %}{% endif %}{% endfor %}
 
-chmod go-rwx /var/lib/www-static/*/.git || true
+# Dotfiles (or directories) should not be exposed to the web,
+# ... except for .well-known
+chmod go-rwx /var/lib/www-static/*/.??* || true
+chmod go+rx /var/lib/www-static/*/.well-known || true
 
 
 #############################################################################
