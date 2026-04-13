@@ -4,7 +4,7 @@ cd "$(dirname $0)/.."
 export PATH="$(pwd):$(pwd)/tools:$PATH"
 
 cd tree || exit 100
-source g8r.vars
+source 000_base.vars
 [ "$1" = "" -o "$2" = "" -o ! -d "skeletons/$2" ] && cat "../docs/help/add-host.txt" && exit 1 || true
 
 G8R_TREE="$(pwd)"
@@ -31,13 +31,14 @@ DIR="$(pwd)"
 HOST_INDEX=$(cd ..; ls -1 */host.json |wc -l)
 
 cp -a "../../skeletons/${HOST_TYPE}/." .
-cat <<tac >g8r.vars
+cat <<tac >000_base.vars
 host_name=${HOST_NAME}
 host_type=${HOST_TYPE}
 host_index=${HOST_INDEX}
 host_ipv4=$IPv4
 host_ipv6=$IPv6
 host_updates="${HOST_UPDATES:-default}"
+host_update_schedule="${HOST_UPDATE_SCHEDULE:-weekly}"
 host_backups="${BACKUPS:-tgz:auto}"
 host_g8r_secret=${HOST_SECRET}
 tac

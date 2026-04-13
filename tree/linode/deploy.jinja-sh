@@ -19,15 +19,15 @@ ROOT_PASSWD="$(pwgen 24 1)"
 STACKSCRIPT="$(jq .id bootstrap-script.json)"
 
 if [ "$(which linode-cli)" = "" ]; then
-    echo 'Sorry, linode-cli not found on your PATH. Aborting.'
+    echo 'Sorry, linode-cli not found on your PATH. Aborting.' >&2
     exit 2
 fi
 if [ -e "$HOST_DIR"/linode.json ]; then
-    echo 'Sorry, host already has a linode.json file. Aborting.'
+    echo 'Sorry, host already has a linode.json file. Aborting.' >&2
     exit 3
 fi
 if [ "$STACKSCRIPT" = "" ]; then
-    echo 'Sorry, could not figure out our stackscript ID. Aborting.'
+    echo 'Sorry, could not figure out our stackscript ID. Aborting.' >&2
     exit 4
 fi
 
@@ -38,14 +38,20 @@ linode-cli linodes create --json \
     --stackscript_id="$STACKSCRIPT" \
     --stackscript_data="{\"G8R_ID\": \"${HOST_SECRET}\"}" \
     |jq --indent 2 '.[0]' \
-    |tee "$HOST_DIR/linode.json" \
-||rm -f "$HOST_DIR/linode.json"
+    |tee "$HOST_DIR/linode-new.json"
 
 cd $HOST_DIR
-source g8r.vars
+IPv6="$(jq --indent 0 .ipv6 linode-new.json 2>/dev/null |sed -e s,/128,,)"
+IPv4="$(jq --indent 0 '.ipv4[0]' linode-new.json 2>/dev/null)"
 
-IPv6="$(jq --indent 0 .ipv6 linode.json 2>/dev/null |sed -e s,/128,,)"
-IPv4="$(jq --indent 0 '.ipv4[0]' linode.json 2>/dev/null)"
+if [ "$IPv4" = "" -o "$IPv4" = null ]; then
+    echo 'Sorry, could not figure out host IP address. Aborting.' >&2
+    rm -f "$HOST_DIR/linode-new.json"
+    exit 6
+fi
+
+mv -f linode-new.json linode.json
+source <(g8r host-cfg "$HOST_SECRET")
 
 "${G8R_TOOLS}"/json_edit.py \
     host.json \

@@ -50,6 +50,7 @@ RANDCRAP=$(python3 -c \
 g8r_governating_domain=example.org
 g8r_governator_hostname=g8r.example.org
 g8r_admin_email=root@example.org
+g8r_vps_provider=linode
 g8r_init_have_webserver=N
 g8r_init_static_path=/var/www/html
 g8r_metrics_secret=$(python3 -c \
@@ -58,7 +59,7 @@ g8r_metrics_secret=$(python3 -c \
 
 
 # Load any previous progress...
-OUTPUT="${G8R_TREE}/g8r.vars"
+OUTPUT="${G8R_TREE}/000_base.vars"
 [ -e "$OUTPUT" ] && source "$OUTPUT"
 
 # Guarantee we save on exit
@@ -69,6 +70,7 @@ g8r_governating_domain=${g8r_governating_domain}
 g8r_governator_hostname=${g8r_governator_hostname}
 g8r_admin_email=${g8r_admin_email}
 g8r_url_base=https://${g8r_governator_hostname}/g8r-${g8r_governating_domain}
+g8r_vps_provider=${g8r_vps_provider}
 g8r_metrics_secret=${g8r_metrics_secret}
 g8r_metrics_password_bcrypt="${g8r_metrics_secret_bcrypt}"
 

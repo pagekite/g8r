@@ -8,6 +8,9 @@ Usage examples:
     # Set the document root
     export JINJATOOL_ROOT=/path/to/documents
 
+    # Decide which variables to load and their ordering
+    export JINJATOOL_VARS=jinjatool.vars:jinjatool.json
+
     # Render to standard output
     jinjatool.py input.jinja
 
@@ -22,8 +25,9 @@ Usage examples:
     jinjatool.py --deps thing.jinja otherthing.jinja
 
 The variables provided to the Jinja rendering engine are the Unix
-environment variables, optionally updated/augmented with foo=bar pairs
-from the command line as illustrated above.
+environment variables, optionally updated/augmented the contents of
+variable definition files found in the filesystem (per JINJATOOL_VARS)
+or with foo=bar pairs from the command line.
 
 Variable definitions and input/output rendering pairs can be mixed and
 matched and will be processed in order.
@@ -38,10 +42,19 @@ import os
 import re
 import subprocess
 import sys
+import time
 
 from jinja2.ext import Extension
 from markdown import markdown
 
+try:
+    from markupsafe import Markup
+except ImportError:
+    from jinja2 import Markup
+
+
+# Default list of files to load (in order) for variables
+JINJATOOL_DEFAULT_VARS = 'jinjatool.vars:jinjatool.json'
 
 # Used to auto-add <a name=...> to headings.
 HEADINGS_RE = re.compile(r'(<[Hh]\d+[^>]*>)([^>]*)(</[Hh]\d+>)', flags=re.S)
@@ -112,6 +125,19 @@ def toc_friendly_markdown(text):
     return mtext
 
 
+@jinja2.pass_context
+def get_all_vars(context, prefixes=None):
+    """Returns a dictionary of all variables currently in scope"""
+    def _check(k):
+        if not prefixes:
+            return True
+        for p in prefixes:
+            if k.startswith(p):
+                return True
+        return False
+    return dict((k, v) for k, v in context.get_all().items() if _check(k))
+
+
 # A Jinja extension which gives us shell commands, markdown and json processing
 class JinjaToolExtension(Extension):
     def __init__(self, env):
@@ -119,6 +145,7 @@ class JinjaToolExtension(Extension):
         env.globals['bash'] = self._bash
         env.globals['cat'] = self._cat
         env.globals['ls'] = self._ls
+        env.globals['all_vars'] = get_all_vars
         env.filters['bash'] = self._bash
         env.filters['max'] = self._max
         env.filters['min'] = self._min
@@ -126,6 +153,7 @@ class JinjaToolExtension(Extension):
         env.filters['date'] = self._date
         env.filters['cal'] = self._cal
         env.filters['schedule'] = self._schedule
+        env.filters['health'] = self._health
         env.filters['set'] = self._set
         env.filters['without'] = self._without
         env.filters['markdown'] = self._markdown
@@ -134,6 +162,7 @@ class JinjaToolExtension(Extension):
         env.filters['from_rfc822'] = self._from_rfc822
         env.filters['from_vars_txt'] = self._from_vars_txt
         env.filters['from_metrics'] = self._from_metrics
+        env.filters['friendly_bytes'] = self._friendly_bytes
 
     def _bash(self, data=None, command=None):
         if (data is not None) and (command is None):
@@ -148,8 +177,10 @@ class JinjaToolExtension(Extension):
         except (OSError, IOError):
             return None
 
-    def _cat(self, fn):
+    def _cat(self, fn, real_root=False):
         try:
+            if fn.startswith('/') and not real_root:
+                fn = os.path.join(self.environment.jinjatool_root, fn[1:])
             return str(open(os.path.expanduser(fn), 'rb').read(), 'utf-8')
         except (OSError, IOError):
             return None
@@ -167,6 +198,16 @@ class JinjaToolExtension(Extension):
 
     def _min(self, data):
         return min(data or [0])
+
+    def _friendly_bytes(self, data):
+        b = int(data or 0)
+        for base, suffix in (
+                (2**30, 'gb'),
+                (2**20, 'mb'),
+                (2**10, 'kb')):
+            if b > base:
+                return '%2.1f%s' % (b / base, suffix)
+        return '%d bytes' % (b,)
 
     def _hash(self, data, algo='sha1'):
         _b = lambda t: bytes(t, 'utf-8') if isinstance(t, str) else t
@@ -235,6 +276,21 @@ class JinjaToolExtension(Extension):
 
         return (' '.join(cal)).replace(' \n', '\n')
 
+    def _health(self, metrics):
+        summary = {
+            'healthy': True,
+            'failing': [],
+            'services': []}
+        for k, v in metrics.items():
+             if k.endswith('_healthy_seconds'):
+                 parts = k.split('_')
+                 service = '_'.join(parts[1:-2])
+                 summary['services'].append(service)
+                 if v < 0:
+                     summary['healthy'] = False      
+                     summary['failing'].append(service)
+        return summary
+   
     def _schedule(self, schedule, days=35, month=True, week=False):
         one = datetime.timedelta(days=1)
         cur = datetime.datetime.now()
@@ -274,12 +330,12 @@ class JinjaToolExtension(Extension):
         return d
 
     def _markdown(self, text):
-        return jinja2.Markup(toc_friendly_markdown(mtext))
+        return Markup(toc_friendly_markdown(mtext))
 
     def _to_json(self, data):
         j = json.dumps(data, sort_keys=True, indent=2)
         j = j.replace('<', '\\x3c').replace('&', '\\x26')
-        return jinja2.Markup(j)
+        return Markup(j)
 
     def _from_json(self, data):
         if data:
@@ -342,14 +398,15 @@ def MakeJinjaEnvironment(jinjatool_root):
     searchpath = [script_path, script_parent, '/', '.']
     if jinjatool_root:
         searchpath[:0] = [jinjatool_root]
-    return jinja2.Environment(
+    env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(searchpath=searchpath),
         autoescape=True,
         extensions=['jinja2.ext.with_',
                     'jinja2.ext.do',
                     'jinja2.ext.autoescape',
-                    JinjaToolExtension]
-    )
+                    JinjaToolExtension])
+    env.jinjatool_root = jinjatool_root
+    return env
 
 
 def Main():
@@ -363,22 +420,21 @@ def Main():
     jinja_env = MakeJinjaEnvironment(jinjatool_root)
     variables = {}
     variables.update(os.environ)
+    variables.update({
+        'now': int(time.time())})
     depcheck = False
     basedir = os.path.abspath('.')
 
     def load_vars_from_file(vfdir):
-        for suffix in ('', '.2', '.3'):
-          for fmt in ('vars', 'json', 'yml'):
-            jt_vars = variables.get('JINJATOOL_VARS', 'jinjatool')
-            vfn = os.path.join(vfdir, jt_vars + '.' + fmt) + suffix
+        jt_vars = variables.get('JINJATOOL_VARS', JINJATOOL_DEFAULT_VARS)
+        for vfn in (os.path.join(vfdir, v) for v in jt_vars.split(':')):
             if not os.path.exists(vfn):
                 continue
             with open(vfn, 'r') as vf:
-                if vfn.endswith('.yml' + suffix):
+                if vfn.endswith('.yml'):
                     import yaml
                     variables.update(yaml.safe_load(vf))
-                elif vfn.endswith('.json' + suffix):
-                    import json
+                elif vfn.endswith('.json'):
                     variables.update(json.load(vf))
                 else:
                     for line in vf:
@@ -459,4 +515,5 @@ def Main():
                     if b'<html' in data[:80]:
                         sys.stdout.write('\n<!-- EOF:%s -->\n' % infile)
 
-Main()
+if __name__ == '__main__':
+    Main()

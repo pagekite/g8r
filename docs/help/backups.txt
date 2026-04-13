@@ -1,6 +1,9 @@
-Governator Backups
-==================
+Usage: g8r backups [-a] <host_secret> ...
 
-Governator backups... something!
+Fetch the backups from one or more hosts (as identified by their host
+secret) and update `tree/backups-manifest.json`.
 
-FIXME! Write this.
+## About g8r backups
+
+STUFF ABOUT BACKUPS
+

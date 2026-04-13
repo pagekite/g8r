@@ -17,17 +17,17 @@ fi
 mkdir -p "$DIR"
 cd "$DIR"
 
-ln -fs ../recipes/101_etc-hosts.jinja-sh .
+ln -fs ../recipes/config-cache.jinja-* ../recipes/101_etc-hosts.jinja-sh .
 
-cat <<tac >g8r.vars
+cat <<tac >000_base.vars
 host_domain=$DOM
 tac
 while [ "$1" != "" ]; do
-    echo "$1" >>g8r.vars
+    echo "$1" >>000_base.vars
     shift
 done
 
-cat <<tac >g8r.json
+cat <<tac >002_config.json
 {
     "g8r_hosts": {}
 }

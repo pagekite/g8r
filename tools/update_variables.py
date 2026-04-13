@@ -33,6 +33,7 @@ import time
 
 DEFAULT_CONFIG_FILE = 'automations.json'
 DEFAULT_G8R_HOME = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
+DEBUG = os.getenv('G8R_DEBUG', False)
 
 
 class VaryVariables:
@@ -109,7 +110,8 @@ class VaryVariables:
                     for vn in rule['map']:
                         if vn in data:
                             _merge(found, data, vn)
-                        self.stdout('In %s: %s=%s' % (fn, vn, data[vn]))
+                        if DEBUG:
+                            self.stdout('In %s: %s=%s' % (fn, vn, data[vn]))
             except Exception as e:
                 self.stderr('%s: When reading %s: %s' % (type(e).__name__, fn, e))
         return found
@@ -141,7 +143,8 @@ class VaryVariables:
 
     def vary(self):
         for rule in self.rules:
-            self.stdout('Checking rule: %s' % (rule['map']))
+            if DEBUG:
+                self.stdout('Checking rule: %s' % (rule['map']))
             if self.check_preconditions(rule):
                 for group in self.groups(rule):
                     if self.update(rule, group, self.gather(rule, group)):

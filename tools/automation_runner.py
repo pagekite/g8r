@@ -155,8 +155,8 @@ class AutomationRunner:
 
             exitcode = child.wait()
             if exitcode != 0:
-                sys.stderr('%s failed with code: %d' % (cmd[0], exitcode))
-                return []
+                sys.stderr.write('%s failed with code: %d\n' % (cmd[0], exitcode))
+                return
 
             for line in stdout.splitlines():
                 line = line.rstrip()

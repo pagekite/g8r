@@ -15,6 +15,21 @@ apt-get install -y prometheus-node-exporter
 
 
 #############################################################################
+# Configure our health-check cron-job
+#
+CMD5=""
+[ -e /etc/cron.d/g8r-healthchk ] && CMD5="$(md5sum </etc/cron.d/g8r-healthchk)"
+cat <<tac >/etc/cron.d/g8r-healthchk
+# This performs regular health checks.
+#
+*/3 * * * * root /bin/g8r healthchk -a >/dev/null 2>/dev/null
+tac
+if [ "$CMD5" != "md5sum </etc/cron.d/g8r-healthchk" ]; then
+    systemctl restart cron || true
+fi
+
+
+#############################################################################
 # Configure and harden prometheus-node-exporter:
 #
 #   - Change ports just for some obscurity

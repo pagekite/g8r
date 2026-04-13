@@ -1,5 +1,6 @@
 #!/bin/bash
 #
+{%- set g8r_status = (cat('../../status/summary.json')|from_json) %}
 {%- if g8r_hosts|default({})|length < 1 %}
 #
 # No hosts defined, doing nothing.
@@ -18,12 +19,21 @@ sed -e '/G8R_HOSTS_BEGIN:{{ host_domain }}/,/G8R_HOSTS_END:{{ host_domain }}/ d'
 cat <<tac
 ##[ Governator generated hosts, do not edit ]########G8R_HOSTS_BEGIN:{{ host_domain }}###
 {% for host_name in g8r_hosts|default({}) %}{% set info = g8r_hosts[host_name] %}
-  {%- if info.ipv4 %}{% for ip in info.ipv4 %}
-{{ ip }}    {{ host_name }} {{ host_name }}.{{ host_domain }}
-  {%- endfor %}{% endif %}
-  {%- if info.ipv6 %}{% for ip in info.ipv6 %}
-{{ ip }}    {{ host_name }} {{ host_name }}.{{ host_domain }}
-  {%- endfor %}{% endif %}
+{%-   set fqdns = [host_name +'.'+ host_domain] %}
+{%-   set drained = 'drained' in g8r_status.get(host_secret, {}) %}
+{%-   for domain, dinfo in g8r_service_domains.items() %}
+{%-     if host_name in dinfo.hosts %}
+{%-       if (dinfo.hosts|length < 2) or not drained %}
+{%-         set a = fqdns.append(domain) %}
+{%-       endif %}
+{%-     endif %}
+{%-   endfor %}
+{%-   if info.ipv4 %}{% for ip in info.ipv4 %}
+{{ ip }}    {{ host_name }} {{ fqdns|sort|unique|join(' ') }}
+{%-   endfor %}{% endif %}
+{%-   if info.ipv6 %}{% for ip in info.ipv6 %}
+{{ ip }}    {{ host_name }} {{ fqdns|sort|unique|join(' ') }}
+{%-   endfor %}{% endif %}
 {%- endfor %}
 
 ##[ End of Governator generated hosts ]################G8R_HOSTS_END:{{ host_domain }}###

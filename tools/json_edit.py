@@ -6,10 +6,14 @@ Paths are used to traverse a tree of dictionaries and find a variable.
 
 Operations are:
     =   set       # Set a variable
+    >=  max       # Set a variable if new value is bigger
+    <=  min       # Set a variable if new value is smaller
     +=  addition  # Int/Float addition
     -=  subtract  # Int/Float subraction
     |=  add       # Add if not present to a list/set
         append    # Append to a list (duplicates allowed)
+        bound     # Bound a list, keeping the last N events
+        sort      # Sort a list, descending if N is negative
 
 Values are parsed as JSON, so they can be any of strings, ints, lists
 or objects - it is up to the caller to make sure the data type matches
@@ -18,16 +22,16 @@ the operation.
 Example:
 
     # Create an empty list and append something to it
-    json_edit.py hosts.json \\
+    json_edit.py example.json \\
         'hosts/myhost/ipv4' set '[]' \\
         'hosts/myhost/ipv4' append 1.2.3.4
 
     # Change the zeroth element
-    json_edit.py hosts.json \\
+    json_edit.py example.json \\
         'hosts/myhost/ipv4[0]' = 4.3.2.1
 
     # Remove the entire hosts subtree
-    json_edit.py hosts.json \\
+    json_edit.py example.json \\
         . remove hosts
 """
 import json
@@ -92,6 +96,26 @@ class JsonSetter:
                 old_val, data[dkey][didx] = data[dkey][didx], dval
             changes += 1 if (old_val != dval) else 0
 
+        elif op in ('>=', 'max'):
+            if didx is None:
+                if data.get(dkey, 0) < dval:
+                    data[dkey] = dval
+                    changes += 1
+            else:
+                if data[dkey][didx] < dval:
+                    data[dkey][didx] = dval
+                    changes += 1
+
+        elif op in ('<=', 'min'):
+            if didx is None:
+                if data.get(dkey, 0) > dval:
+                    data[dkey] = dval
+                    changes += 1
+            else:
+                if data[dkey][didx] > dval:
+                    data[dkey][didx] = dval
+                    changes += 1
+
         elif op == ('+=', 'addition'):
             if didx is None:
                 data[dkey] += dval
@@ -137,6 +161,29 @@ class JsonSetter:
                         else:
                             data[dkey].remove(dval)
                         changes += 1
+
+        elif op == 'bound':
+            if dkey in data:
+                lst = None
+                if didx is not None:
+                    lst = data[dkey][didx]
+                else:
+                    lst = data[dkey]
+                while len(lst) > dval:
+                    lst.pop(0)
+                    changes += 1
+
+        elif op == 'sort':
+            if dkey in data:
+                lst = None
+                if didx is not None:
+                    lst = data[dkey][didx]
+                else:
+                    lst = data[dkey]
+                lst.sort()
+                if dval < 0:
+                    lst.reverse()
+
         else:
             raise ValueError('Unknown operation: %s' % op)
 

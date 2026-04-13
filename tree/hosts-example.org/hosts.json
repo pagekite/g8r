@@ -1,0 +1,14 @@
+{
+  "g8r_hosts": {
+    "myhost": {
+      "secret": "web-myhost-secret",
+      "type": "web",
+      "ipv4": [
+        "10.1.2.3"
+      ],
+      "ipv6": [
+        "2001:DB8::0a01:0203"
+      ]
+    }
+  }
+}

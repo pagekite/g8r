@@ -1,70 +1,89 @@
 {%- extends "/jinja/page.html-jinja" %}
 
 {%- set page = {'title': g8r_governating_domain} %}
-{%- set host_status = cat('../status/summary.json')|from_json %}
-{%- set dummy_backups = {
-  'how': 'rsync',
-  'when': 'today',
-  'size': '15gb'} %}
-{%- set dummy_events = {
-  'new': 2,
-  'events': [
-    {
-      'when': '2026-04-05 11:00',
-      'title': 'Rebooted something', 
-      'details': 'Rebooting went well! Many boots were reed!'
-    },{
-      'when': '2026-04-05 19:00',
-      'title': 'Shut it down', 
-      'details': 'Just make it stop, srsly!'
-    }
-  ]} %}
-
-{# TODO:
-
-Jinjatool:
-   - Friendly date for backups
-   - Friendly bytes for backups
-
-g8r:
-   - Create inventory of backups, maps hosts -> dates and sizes
-   - Create scheduler logic that gives us the next n events
-   - If the scheduler is used for backups or health, exclude that?
-   - hoststat needs health info
-
- #}
+{%- set events = cat('../status/events.json')|from_json %}
+{%- set status = cat('../status/summary.json')|from_json %}
+{%- set metrics = cat('../status/metrics.json')|from_json %}
+{%- set backups = cat('../manifest-backups.json')|from_json %}
+{%- set event_explanations = {
+        'bootstrapped': [
+            'Bootstrapped!',
+            'Host $(hostfqdn)s completed the initial server setup.'],
+        'backup_ready': [
+            'Backup Ready',
+            'Host %(hostfqdn)s generated new backups.']}
+-%}
+{%- set host_fqdn_map = {} %}
 
 {%- block title %}{{ page.title }}{% endblock %}
 {%- block content %}
 
-    <h1>
-      <img src="imgs/Governator-by-Kria.png" alt="g8r">
-    </h1>
+{%- set metrics_ok = [] %}
+{%- set metrics_all = [] %}
+{%- for s, m in metrics.get('metrics', {}).items() %}
+{%-   for k, v in m.items() %}
+{%-     if '_healthy_seconds' in k and v > 0 %} 
+{%-       set a = metrics_all.append(k) %}
+{%-       if v > 0 %} 
+{%-         set a = metrics_ok.append(k) %}
+{%-       endif %}
+{%-     endif %}
+{%-   endfor %}
+{%- endfor %}
+{%- if metrics_all %}
+{%-   set health_ratio = ((metrics_ok|length) * 110) // (metrics_all|length) %}
+{%- else %}
+{%-   set health_ratio = 0 %}
+{%- endif %}
+
+    <div class='heading'>
+      <img src="imgs/Governator-by-Kria.png" alt="">
+      <p>
+        Servers!!<br>
+        <small title='It goes to 11' class='{% if health_ratio < 100 %}un{% endif %}healthy'>
+          health: {{ health_ratio }}%
+          {%- if health_ratio > 100 %} 😎
+          {%- elif health_ratio > 90 %} 🙂
+          {%- elif health_ratio > 80 %} 🫤
+          {%- elif health_ratio > 50 %} 🤢
+          {%- else %} 🔥{% endif %}
+        </small>
+      </p>
+    </div>
+
+    <p id='hints'>
+      This is an overview over your Governated servers. Click on a server name, or
+      on the Events above to expand or collapse further details. Hover over things
+      for helpful tooltips.
+    <p>
 
   {%- for domdir in ls('..', '^hosts-') %}
-    {%- set domvars = cat('../' + domdir + '/g8r.vars')|from_vars_txt %}
-    {%- set domjson = cat('../' + domdir + '/g8r.json')|from_json %}
+    {%- set domcfg = cat('../' + domdir + '/config-cache.json')|from_json %}
 
-    <h2>{{ domvars.host_domain }}</h2>
+    <h2>{{ domcfg.host_domain }}</h2>
     <table class='host-table'>
       <tr>
-        <th class='host-healthy'></th>
+        <th class='host-healthy' title='System health'>🩺</th>
         <th class='host-name'>Host</th>
-        <th class='host-ips'>IPs &amp; URLs</th>
-        <th class='host-schedule'>Schedule</td>
-        <th class='host-backups'>💾</td>
+        <th class='host-ips' title='IPv4, IPv6 and web addresses'>Addresses</th>
+        <th class='host-schedule' title='Updates, restarts, reboots, etc.'>Schedule</td>
+        <th class='host-backups' title='Backups'>💾</td>
       </tr>
-    {%- for hostname in domjson.g8r_hosts %}
-      {%- set hostjson = domjson.g8r_hosts[hostname] %}
-      {%- set hostsched = domjson.g8r_update_schedule.get(hostname) %}
-      {%- set hoststat = host_status.get(hostjson.secret, {}) %}
+    {%- for hostname in domcfg.g8r_hosts %}
+      {%- set hostfqdn = hostname +'.'+ domcfg.host_domain %}
+      {%- set hostjson = domcfg.g8r_hosts[hostname] %}
+      {%- set hostsched = domcfg.g8r_update_schedule.get(hostname) %}
+      {%- set hosthealth = metrics.get('metrics', {}).get(hostfqdn, {})|health %}
+      {%- set hoststat = status.get('status', {}).get(hostjson.secret, {}) %}
+      {%- set hostbkup = backups.g8r_backups.get(hostjson.secret, {}).get('TOTALS', {}) %}
+      {%- set a = host_fqdn_map.__setitem__(hostjson.secret, hostfqdn) %}
       <tr class='host'>
-        <td class='host-healthy {% if not hoststat.healthy %}un{% endif %}healthy'>
+        <td class='host-healthy {% if not hosthealth.healthy %}un{% endif %}healthy'>
           <input type="checkbox" id="host-toggle-{{ loop.index }}" class="toggle-input">
           {%- if hoststat.seen %}
-            <a href="http://governator:{{ g8r_metrics_secret }}@{{ hostname }}.{{ domvars.host_domain }}:1987/metrics"
-               title="Seen at {{ hoststat.seen.when|date }} from {{ hoststat.seen.ip }}">
-              {%- if hoststat.healthy -%}
+            <a href="http://governator:{{ g8r_metrics_secret }}@{{ hostname }}.{{ domcfg.host_domain }}:1987/metrics"
+               title="Checked in at {{ hoststat.seen.when|date('%H:%M, %Y-%m-%d') }} from {{ hoststat.seen.ip }}">
+              {%- if hosthealth.healthy -%}
                  <b class=dull>OK</b>
               {%- else -%}
                  <b class=warn>:-(</b>
@@ -75,45 +94,74 @@ g8r:
           {%- endif %}
         </td>
         <td class='host-name'>
-          <label for="host-toggle-{{ loop.index }}" class="toggle-label">
-            {{ hostname }}.{{ domvars.host_domain }}
+          <label title='Click to expand / collapse details'
+                 for="host-toggle-{{ loop.index }}" class="toggle-label">
+            {{ hostname }}.{{ domcfg.host_domain }}
           </label>
         </td>
         <td class='host-ips'>
           <p>{{- (hostjson.ipv4|default([]) + hostjson.ipv6|default([]))|join('<br>')|safe -}}</p>
-          <p class=details>{%- for dom, di in domjson.g8r_service_domains.items() %}{% if hostname in di.hosts %}
+          <p class=details>{%- for dom, di in domcfg.g8r_service_domains.items() %}{% if hostname in di.hosts %}
             <a href="http://{{ dom }}/">http://{{ dom }}/</a>
             {%- if not loop.last %}<br>{% endif %}
           {%- endif %}{% endfor %}</p>
         </td>
-        <td class='host-schedule'><pre class=details>
-          {%- if hostsched %}{{ hostsched|schedule|cal|safe }}{% endif -%}
-        </pre><p class="placeholder">...</p></td>
-        <td class='host-backups'>
-          <p>{{ dummy_backups.when }}</p>
-          <p class=details>{{ dummy_backups.how }}</p>
-          <p class=details>{{ dummy_backups.size }}</p>
-        </td>
+        <td class='host-schedule' {%- if hostsched %}
+            title="{% for date, event in (hostsched|schedule).items() %}
+{{- date }}: {{ event }}
+{% endfor %}">
+          <pre class=details>
+            {{- hostsched|schedule|cal|safe -}}
+          </pre><p class="placeholder">
+            ...
+          </p>
+        {%- else %}>
+          <p class='none'><i>none</i></p>
+        {% endif %}</td>
+        <td class='host-backups'{% if hostbkup %}
+            title="{{ hostbkup.bytes }} bytes in {{ hostbkup.count }} backups, most recent at {{ hostbkup.ts|date('%H:%M, %Y-%m-%d') }}">
+          <p>{{ hostbkup.ts|date("%m-%d") }}</p>
+          <p class=details>{{ hostbkup.bytes|friendly_bytes }}</p>
+        {%- else %}>
+          <p class='none'>none</p>
+        {% endif %}</td>
       </li>
     {%- else %}
       <tr><td colspan=5 class="no-hosts"><i>No hosts configured</i></td></tr>
     {%- endfor %}
     </table>
 
+    {%- set recent_events = [] %}
+    {%- for ts, hostsecret, ev in events.log %}
+      {%- if ts > now - 3600 and ev in event_explanations %}
+        {%- set a = recent_events.append(ev) %}
+      {%- endif %}
+    {%- endfor %}
     <div id="events-container-wrap"><div id="events-container">
       <input type="checkbox" id="events-toggle" class="toggle-input">
       <label for="events-toggle" class="toggle-label">
-        <h2>Events{% if dummy_events.new %}
-          <span class=warn>({{ dummy_events.new }})</span>{% endif -%}
+        <h2>Events{% if recent_events|length > 0 %}
+          <span class=warn>({{ recent_events|length }})</span>{% endif -%}
         </h2>
       </label>
       <div class="events">
-    {%- for event in dummy_events.events %}
+    {%- for ts, hostsecret, ev in events.log|reverse %}
+      {%- set title, message = event_explanations.get(ev, [0, 0]) %}
+      {%- if title and message %}
+      {%- set e = {
+         'ts': ts,
+         'when': ts|date('%H:%M, %Y-%m-%d'),
+         'event': ev,
+         'hostfqdn': host_fqdn_map.get(hostsecret, 'unknown'),
+      } %}
+        {%- if e.hostfqdn != 'unknown' %}
          <div class="event">
-            <h3>{{ event.title }}</h3>
-            <h4>{{ event.when }}</h4>
-            <p class="message">{{ event.details }}</p>
+            <h3>{{ title|format(**e)|safe }}</h3>
+            <h4>{{ e.when }}</h4>
+            <p class="message">{{ message|format(**e)|safe }}</p>
          </div>
+        {%- endif %}
+      {%- endif %}
     {%- endfor %}
       </div>
     </div></div>

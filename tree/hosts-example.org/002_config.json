@@ -1,0 +1,18 @@
+{
+  "g8r_service_domains": {
+    "webtest.example.org": {
+      "hosts": [
+        "www",
+        "myhost"
+      ],
+      "web_static_git": "https://github.com/mailpile/www.mailpile.is/"
+    },
+    "www.example.org": {
+      "hosts": [
+        "www"
+      ],
+      "web_static_paths": "/ /index.html /.healthy.txt",
+      "web_proxy": "127.0.0.1:1987"
+    }
+  }
+}

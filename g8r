@@ -23,16 +23,56 @@ case "$COMMAND" in
         exec ${G8R_TOOLS}/init.sh
         ;;
 
+    host-secret)
+        cd "${G8R_HOME}"
+        source tree/000_base.vars
+        target="$1"
+        if cd tree/hosts-*/"$target" 2>/dev/null; then
+            echo "$target"
+            exit 0
+        fi
+        host_name=$(echo "$target" |sed -e 's/\..*$//')
+        host_domain=$(echo "$target" |sed -e 's/^[^\.]*\.//')
+        [ "$host_domain" = "$host_name" ] && host_domain="$g8r_governating_domain"
+        if cd tree/hosts-"$host_domain" 2>/dev/null; then
+            host_secret=$(jq .g8r_hosts."$host_name".secret config-cache.json |sed -e 's/"//g')
+            if [ "$host_secret" != "" -a "$host_secret" != null ]; then
+                echo "$host_secret"
+                exit 0
+            fi
+        fi 
+        echo "Host not found for '$target'" >&2
+        exit 1
+        ;;
+
+    host-cfg)
+        [ "$1" = '--json' ] && T=json && shift || T=sh
+        target=$(g8r host-secret "$1")
+        [ "$target" = "" ] && echo "Usage: g8r host-cfg [--json] <host>" >&2 && exit 1
+        umask 0077
+        cd "${G8R_HOME}"
+        if cd tree/hosts-*/"$target" 2>/dev/null; then
+            target_dir=$(pwd)
+            ln -s ../../recipes/config-cache.jinja-$T .g8r-tmp-$$.jinja-$T
+            (cd "${G8R_HOME}/tree" \
+              && make $target_dir/.g8r-tmp-$$.$T >/dev/null \
+              && cat $target_dir/.g8r-tmp-$$.$T)
+            rm -f .g8r-tmp-*
+            exit 0
+        fi
+        echo "Host config not found for '$target'" >&2
+        exit 1
+        ;;
+
     hosts)
         cd ${G8R_HOME}/tree
         for ddir in hosts-*; do
-            source "$ddir/g8r.vars"
             for hdir in $ddir/*-*-*; do
                 if [ -e "$hdir/host.json" ]; then
-                    source "$hdir/g8r.vars"
                     hsec=$(echo $hdir |cut -f2 -d/)
-                    ipv4=$(jq ".g8r_hosts.$host_name.ipv4[0]" "$hdir/host.json" |sed -e 's/"//'g)
-                    ipv6=$(jq ".g8r_hosts.$host_name.ipv6[0]" "$hdir/host.json" |sed -e 's/"//'g)
+                    source <(g8r host-cfg "$hsec")
+                    ipv4=$(jq ".g8r_hosts.${host_name}.ipv4[0]" "$hdir/host.json" |sed -e 's/"//'g)
+                    ipv6=$(jq ".g8r_hosts.${host_name}.ipv6[0]" "$hdir/host.json" |sed -e 's/"//'g)
                     printf "%15s %32s %-19s %s\\n" "$ipv4" "$ipv6" "$host_name.$host_domain" "$hsec"
                 fi
             done
@@ -47,22 +87,36 @@ case "$COMMAND" in
         ;;
 
     add-domain)
-        exec ${G8R_TOOLS}/add-domain.sh "$@"
+        exec ${G8R_TOOLS}/domain-add.sh "$@"
         ;;
 
     add-host)
-        exec ${G8R_TOOLS}/add-host.sh "$@"
+        exec ${G8R_TOOLS}/host-add.sh "$@"
+        ;;
+
+    deploy)
+        exec ${G8R_TOOLS}/host-deploy.sh "$@"
         ;;
 
     rm-host)
-        HC=$($0 hosts |grep "$1" |wc -l)
-        H=$($0 hosts |grep "$1" |awk '{print $4}')
-        cd "${G8R_HOME}" && source tree/g8r.vars
-        [ "$1" != "" -a ! -e "exposed/hosts/$H/host.json" ] && echo -e "Host not found or ambiguous: $1"
-        [ "$1" = "" -o ! -e "exposed/hosts/$H/host.json" ] && cat ${G8R_HOME}/docs/help/rm-host.txt && exit 1
-        echo "Press ENTER to remove:" tree/hosts-*/"$H" " (CTRL+C aborts)"
-        read
-        rm -vrf exposed/hosts/"$H" tree/hosts-*/"$H"
+        [ "$1" = "" ] && cat ${G8R_HOME}/docs/help/rm-host.txt && exit 1
+        for H in $*; do
+            H=$(g8r host-secret "$H")
+            [ "$H" != "" -a ! -e "exposed/hosts/$H/host.json" ] && echo -e "Host not found or ambiguous: $1"
+            [ "$H" = "" -o ! -e "exposed/hosts/$H/host.json" ] && cat ${G8R_HOME}/docs/help/rm-host.txt && exit 1
+            source <(g8r host-cfg "$H")
+            HOST_DIR=$(cd tree/hosts-*/"$H"; pwd)
+            HOST_FQDN="${host_name}.${host_domain}"
+            echo -e "Press ENTER to remove $HOST_FQDN: (CTRL+C aborts)\\n - $HOST_DIR"
+            read
+            rm -vrf exposed/hosts/"$H" tree/hosts-*/"$H" tree/status/*"$H"*
+            json_edit.py tree/hosts-"${host_domain}"/009_automation.json \
+                "g8r_hosts" remove "${host_name}" \
+                "g8r_update_schedule" remove "${host_name}"
+            json_edit.py tree/status/summary.json "status" remove "$H"
+            json_edit.py tree/status/metrics.json "metrics" remove "$HOST_FQDN"
+            echo "IMPORTANT: Run 'g8r make' to avoid stale data."
+        done
         ;;
 
     metrics)
@@ -70,15 +124,13 @@ case "$COMMAND" in
         ;;
 
     ssh)
-        [ "$1" = "" ] && echo "SSH to where?" && exit 1
-        cd "${G8R_HOME}" && source tree/g8r.vars
-        H=$($0 hosts |grep "$1" |head -1 |awk '{print $4}')
-        [ "$H" = "" ] && echo "Unknown host: $1" && exit 1
-        cd "${G8R_TREE}"/hosts*/"$H" || exit 1
-        source ../g8r.vars
-        source g8r.vars
+        H=$(g8r host-secret "$1")
+        [ "$H" = "" ] && echo "SSH to where?" && exit 1
         shift
-        exec ssh -p ${g8r_sshd_port:-22} root@"$host_name.$host_domain" "$@"
+        source <(g8r host-cfg "$H")
+        target=${host_ipv4:-${host_ipv6:-"$host_name.$host_domain"}}
+        echo "Attempting: ssh -p ${g8r_sshd_port:-22} root@$target ..." >&2
+        exec ssh -p ${g8r_sshd_port:-22} "root@$target" "$@"
         ;;
 
     update)
@@ -93,12 +145,24 @@ case "$COMMAND" in
         }
         ;;
 
+    backups)
+        cd "${G8R_HOME}" || exit 1
+        backups-fetch.sh "$@"
+        ;;
+
     healthchk)
         cd "${G8R_HOME}" || exit 1
-        fragment-run.sh "${G8R_HOME}/scripts/$1" HEALTH_CHECK
+        if [ "$1" = "-a" ]; then
+            for s in $(${G8R_HOME}/g8r ls); do
+                fragment-run.sh "${G8R_HOME}/scripts/$s" HEALTH_CHECK
+            done
+        else
+            fragment-run.sh "${G8R_HOME}/scripts/$1" HEALTH_CHECK
+        fi
         ;;
 
     run)
+        [ "$1" = "" ] && exit 1
         G8R_FORCE=n
         if [ "$1" = "--force" ]; then
             G8R_FORCE=y
@@ -127,7 +191,7 @@ case "$COMMAND" in
         fi
         ;;
 
-    *|help)
+    help)
         PAGER=$(which less && echo '-XF')
         [ "$PAGER" = "" ] && PAGER=$(which more)
         [ "$PAGER" = "" ] && PAGER=cat
@@ -150,7 +214,7 @@ tac
         [ -e "$G8R_HOME/tree/automations.json" ] && cat <<tac
     automate   Run automations defined in \$G8R_HOME/tree/automations.json
 tac
-        [ -e "$G8R_HOME/tools/add-domain.sh" ] && cat <<tac
+        [ -e "$G8R_HOME/tools/domain-add.sh" ] && cat <<tac
     init       Peform basic setup of the Governator Server
     make       Rebuild scripts by running make in \$G8R_HOME/tree
 
@@ -159,8 +223,8 @@ tac
     etc-hosts  Update /etc/hosts on this machine using current inventory
     rm-host    Remove a host (run w/o args for help)
 
-   *backup     Download the most recent backups from a host
-   *deploy     Deploy a host on the VPS provider of your choice
+    backups    Download the most recent backups from a host
+    deploy     Deploy a host on the VPS provider of your choice
     metrics    Fetch the metrics/monitoring data from a host
     ssh        SSH (as root) into a specific host
     update     Run \`g8r run --force 900_update.sh\` on a host
@@ -179,5 +243,10 @@ Try \`$G8R help <command>\` (e.g. \`$G8R help add-host\`) to learn more.
 [G8R_HOME=$G8R_HOME]
 tac
         )|$PAGER
+        ;;
+
+    *)
+        $0 help >&2
         exit 99
+        ;;
 esac

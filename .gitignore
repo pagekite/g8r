@@ -6,6 +6,8 @@ venv
 __pycache__
 .depend
 .depend.up
+config-cache.sh
+config-cache.json
 *.html
 *.pyc
 *~

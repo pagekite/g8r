@@ -11,8 +11,11 @@
     "/var/log/apache2/access.log"
   ],
   "log_events": [
-    ["/events/\\?bootstrapped=(?P<re_host>[A-Za-z0-9_-]+)",    "LIVE_HOST"],
-    ["/events/\\?cron_hourly=(?P<re_host>[A-Za-z0-9_-]+)",     "LIVE_HOST"],
+    ["/events/\\?(?:bootstrapped|cron_hourly)=(?P<re_host>[A-Za-z0-9_-]+)",
+                                                               "HOST_LIVE"],
+    ["/events/\\?(?P<re_event>backup_ready|drain|undrain)=(?P<re_host>[A-Za-z0-9_-]+)",
+                                                               "HOST_EVENT"],
+    ["/events/\\?backup_ready=(?P<re_host>[A-Za-z0-9_-]+)",    "BACKUP_READY"],
     ["/events/\\?git_update=\\S+",                             "GIT_UPDATE"],
     ["/events/\\?site_update=(?P<re_domain>[A-Za-z0-9\\.-]+)", "SITE_UPDATE"]
   ],
@@ -21,6 +24,7 @@
   "#12": "The granularity is once/minute (SS undefined), while the runner runs.",
   "#13": "Spaces in the regexp are treated as match-anything wildcards",
   "scheduled_events": {
+    "h[012345][02468]m":      "UPDATE_METRICS",
     "(Thur|Tue)sday 2[123]h": "BEER_EVENT"
   },
 
@@ -31,12 +35,12 @@
   "update_variables": [
     {
       "pre_conditions": {},
-      "read": ["/path/to/builds/files-manifest.json"],
+      "read": ["tree/manifest-packages.json"],
       "map": {
         "manifest_tool1_latest": "tool1_version",
         "manifest_tool2_latest": "tool2_version"
       },
-      "write": ["/path/to/g8r/canaries/web-*/g8r.json"],
+      "write": ["/tree/canaries/web-*/009_automation.json"],
       "emit_events": ["REBUILD"]
     },
     {
@@ -46,7 +50,16 @@
       "map": {
         "g8r_hosts": "g8r_hosts"
       },
-      "write": ["$GROUP/g8r.json"],
+      "write": ["$GROUP/009_automation.json"],
+      "emit_events": ["REBUILD"]
+    },
+    {
+      "pre_conditions": {},
+      "read": ["exposed/files/backups/*/manifest.json"],
+      "map": {
+        "g8r_backups": "g8r_backups"
+      },
+      "write": ["tree/manifest-backups.json"],
       "emit_events": ["REBUILD"]
     },
     {
@@ -56,14 +69,14 @@
       "map": {
         "g8r_update_schedule": "g8r_update_schedule"
       },
-      "write": ["$GROUP/g8r.json"],
+      "write": ["$GROUP/009_automation.json"],
       "emit_events": ["REBUILD"]
     },
     {
       "pre_conditions": {},
       "read": ["tree/status/host-*.json"],
       "map": {
-        "metrics": "metrics"
+        "status": "status"
       },
       "write": ["tree/status/summary.json"],
       "emit_events": ["REBUILD"]
@@ -75,9 +88,11 @@
   "#93": "Automations may output 'AUTOMATION: NAME' to STDOUT to trigger",
   "#94": "further processing, e.g. updated variables trigginrg a rebuild.",
   "automations": [
-    ["HEALTH_CHECK",    "health-checks.sh"],
     ["BEER_EVENT",      "echo", "$ts"],
-    ["LIVE_HOST",       "seen-live.sh", "$re_host", "$log_ip"],
+    ["HOST_LIVE",       "event-handle.sh", "seen", "$re_host", "$log_ip", "$log_time"],
+    ["HOST_EVENT",      "event-handle.sh", "$re_event", "$re_host", "$log_ip", "$log_time"],
+    ["UPDATE_METRICS",  "metrics-get.sh", "-A"],
+    ["BACKUP_READY",    "backups-fetch.sh", "$re_host"],
     ["GIT_UPDATE",      "/path/to/bin/update-git-repos.sh"],
     ["SITE_UPDATE",     "/path/to/bin/update-site-content.sh", "$re_domain"],
     ["VARS_UPDATE",     "update_variables.py"],

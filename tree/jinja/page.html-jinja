@@ -10,7 +10,7 @@
   <style type="text/css">
 /* ***************************************************************************** */
 
-{{ cat(JINJATOOL_ROOT + '/jinja/style.css')|safe }}
+{{ cat('/jinja/style.css')|safe }}
 
 /* ***************************************************************************** */
   </style>
@@ -46,7 +46,12 @@
   {%- endif %}
 {%- endif %}
 {%- block page_bottom %}
-    <div id="footer"></div>
+    <div id="footer">
+      <p class="rebuilt">
+        Bashed at {{ now|date('%H:%M, %Y-%m-%d') }} by the
+        <a href="https://github.com/pagekite/g8r/" target=_blank>Governator</a>.
+      </p>
+    </div>
 {%- endblock %}
 
   </div><!-- id=content -->

@@ -28,7 +28,7 @@ import time
 INDENT = int(os.getenv('JSON_INDENT', 2))
 WANTED_TYPES = ['counter', 'gauge']
 METRIC_RE = re.compile(r'^([a-zA-Z_]\S+)\s+([\d\.eE\+-]+)')
-HEALTHY_TTL = float(os.getenv('HEALTHY_TTL', 900))
+HEALTHY_TTL = float(os.getenv('HEALTHY_TTL', 600))
 
 
 def calculate_synthetic_metrics(metrics):
@@ -68,17 +68,23 @@ def get_username_and_password(url):
 
 def fetch_openmetrics_as_json(url, filters, wrap=None, username=None, password=None):
     try:
-        headers = {}
-        if not username:
-            url, username, password = get_username_and_password(url)
-        if username:
-            headers['Authorization'] = 'Basic %s' % str(base64.b64encode(
-                bytes('%s:%s' % (username, password or username), 'utf-8')),
-                'utf-8')
+        if os.path.exists(url):
+            with open(url, 'r') as fd:
+                raw_data = fd.read()
+        else:
+            headers = {}
+            if not username:
+                url, username, password = get_username_and_password(url)
+            if username:
+                headers['Authorization'] = 'Basic %s' % str(base64.b64encode(
+                    bytes('%s:%s' % (username, password or username), 'utf-8')),
+                   'utf-8')
 
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=10) as response:
-            json_text = openmetrics_as_json(response.read().decode('utf-8'), filters) 
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                raw_data = response.read().decode('utf-8')
+
+        json_text = openmetrics_as_json(raw_data, filters) 
     except Exception as e:
         json_text = json.dumps({"error": str(e), "url": url}, indent=INDENT)
     if wrap:
@@ -146,10 +152,6 @@ if __name__ == '__main__':
 
     else:
         url = args.pop(0)
-        if os.path.exists(url):
-            with open(url, 'r') as fd:
-                print(openmetrics_as_json(fd.read(), args))
-        else:
-            if not url.startswith('http'):
-                url = "http://%s/metrics" % (url,)
-            print(fetch_openmetrics_as_json(url, args, **kwargs))
+        if not os.path.exists(url) and not url.startswith('http'):
+            url = "http://%s/metrics" % (url,)
+        print(fetch_openmetrics_as_json(url, args, **kwargs))

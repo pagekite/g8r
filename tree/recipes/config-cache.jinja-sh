@@ -1,0 +1,9 @@
+# These are the current string/int variables for use within shell scripts.
+# See config.json for more complex data.
+#
+{%- for k, v in all_vars(prefixes=['host_', 'g8r_']).items() %}
+{%-   if v is string or v is integer %}
+{{ k }}="{{ v }}"
+{%-   endif %}
+{%- endfor %}
+#EOF#
