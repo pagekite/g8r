@@ -27,7 +27,7 @@ mkdir -p {{ fqdn }}
 touch {{ fqdn }}/index.html
 echo 'OK' >{{ fqdn }}/.healthy.txt
 
-{% for domain, svc in g8r_service_domains.items() %}{%- if svc.web_static_git %}
+{% for domain, svc in (g8r_service_domains|default({})).items() %}{%- if svc.web_static_git %}
  {%- if host_name in svc.hosts|default([host_name]) %}
   {%- if svc.web_reset %}
 rm -rf "{{ domain }}"
@@ -56,7 +56,7 @@ cat <<tac >/etc/caddy/Caddyfile
 }
 
 {% set sites = [] -%}
-{% for domain, svc in g8r_service_domains.items() %}
+{% for domain, svc in (g8r_service_domains|default({})).items() %}
  {%- if host_name in svc.hosts|default([host_name]) %}
   {%- if svc.web_redirect %}
 
@@ -125,7 +125,7 @@ if [ "$(curl -sk --resolve '{{ fqdn }}:80:127.0.0.1' \
     HEALTHY=n
 fi
 
-{% for domain, svc in g8r_service_domains.items() %}
+{% for domain, svc in (g8r_service_domains|default({})).items() %}
   {%- if svc.web_static_git %}
 URL={% if not svc.caddy_tls|default(0) %}http://{% else %}https://{% endif %}{{ domain }}
 if [ "$(curl -sk --resolve '{{ domain }}:443:127.0.0.1' \

@@ -4,7 +4,7 @@
 # website or g8r script tree. It knows how to ask jinjatool.py to calculate
 # dependencies and update itself with whatever rules are necessary.
 #
-JINJATOOL_VARS = 000_base.vars:001_base.yml:002_config.json:009_automation.json
+JINJATOOL_VARS = 000_base.vars:001_config.yml:002_config.json:009_automation.json
 JINJATOOL_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 JINJATOOL := $(abspath $(JINJATOOL_ROOT)/../tools)/jinjatool.py
 MP_RFC822 ?= $(abspath $(shell find . -name template.md-jinja |head -1))

@@ -58,6 +58,7 @@
     <p>
 
   {%- for domdir in ls('..', '^hosts-') %}
+    {%- set domidx = loop.index %}
     {%- set domcfg = cat('../' + domdir + '/config-cache.json')|from_json %}
 
     <h2>{{ domcfg.host_domain }}</h2>
@@ -72,14 +73,14 @@
     {%- for hostname in domcfg.g8r_hosts %}
       {%- set hostfqdn = hostname +'.'+ domcfg.host_domain %}
       {%- set hostjson = domcfg.g8r_hosts[hostname] %}
-      {%- set hostsched = domcfg.g8r_update_schedule.get(hostname) %}
+      {%- set hostsched = domcfg.get('g8r_update_schedule', {}).get(hostname) %}
       {%- set hosthealth = metrics.get('metrics', {}).get(hostfqdn, {})|health %}
       {%- set hoststat = status.get('status', {}).get(hostjson.secret, {}) %}
       {%- set hostbkup = backups.g8r_backups.get(hostjson.secret, {}).get('TOTALS', {}) %}
       {%- set a = host_fqdn_map.__setitem__(hostjson.secret, hostfqdn) %}
       <tr class='host'>
         <td class='host-healthy {% if not hosthealth.healthy %}un{% endif %}healthy'>
-          <input type="checkbox" id="host-toggle-{{ loop.index }}" class="toggle-input">
+          <input type="checkbox" id="host-toggle-{{ domidx }}-{{ loop.index }}" class="toggle-input">
           {%- if hoststat.seen %}
             <a href="http://governator:{{ g8r_metrics_secret }}@{{ hostname }}.{{ domcfg.host_domain }}:1987/metrics"
                title="Checked in at {{ hoststat.seen.when|date('%H:%M, %Y-%m-%d') }} from {{ hoststat.seen.ip }}">
@@ -95,13 +96,13 @@
         </td>
         <td class='host-name'>
           <label title='Click to expand / collapse details'
-                 for="host-toggle-{{ loop.index }}" class="toggle-label">
+                 for="host-toggle-{{ domidx }}-{{ loop.index }}" class="toggle-label">
             {{ hostname }}.{{ domcfg.host_domain }}
           </label>
         </td>
         <td class='host-ips'>
           <p>{{- (hostjson.ipv4|default([]) + hostjson.ipv6|default([]))|join('<br>')|safe -}}</p>
-          <p class=details>{%- for dom, di in domcfg.g8r_service_domains.items() %}{% if hostname in di.hosts %}
+          <p class=details>{%- for dom, di in domcfg.get('g8r_service_domains', {}).items() %}{% if hostname in di.hosts %}
             <a href="http://{{ dom }}/">http://{{ dom }}/</a>
             {%- if not loop.last %}<br>{% endif %}
           {%- endif %}{% endfor %}</p>

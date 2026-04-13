@@ -21,7 +21,7 @@ cat <<tac
 {% for host_name in g8r_hosts|default({}) %}{% set info = g8r_hosts[host_name] %}
 {%-   set fqdns = [host_name +'.'+ host_domain] %}
 {%-   set drained = 'drained' in g8r_status.get(host_secret, {}) %}
-{%-   for domain, dinfo in g8r_service_domains.items() %}
+{%-   for domain, dinfo in (g8r_service_domains|default({})).items() %}
 {%-     if host_name in dinfo.hosts %}
 {%-       if (dinfo.hosts|length < 2) or not drained %}
 {%-         set a = fqdns.append(domain) %}

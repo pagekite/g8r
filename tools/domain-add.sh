@@ -29,7 +29,14 @@ done
 
 cat <<tac >002_config.json
 {
-    "g8r_hosts": {}
+    "g8r_service_domains": {}
+}
+tac
+
+cat <<tac >009_automation.json
+{
+    "g8r_hosts": {},
+    "g8r_update_schedule": {}
 }
 tac
 
