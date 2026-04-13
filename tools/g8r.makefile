@@ -24,6 +24,9 @@ TARGETS = find -L . -name \*.jinja* -o -name \*.md \
                  -e 's/jinja-sh$$/sh/g' \
                  -e 's/jinja$$/html/g'
 
+default:
+	g8r make all
+
 all:
 	@find . -name '*.md.py' -mmin +15 |$(EXCLUDE) |xargs touch /dev/null
 	@$(TARGETS) |xargs -r $(MAKE)
