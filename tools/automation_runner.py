@@ -25,7 +25,7 @@ import subprocess
 import time
 
 
-DEFAULT_CONFIG_FILE = 'automations.json'
+DEFAULT_CONFIG_FILES = ('automations.json', 'automations-local.json')
 DEFAULT_G8R_HOME = os.path.normpath(os.path.join(os.path.dirname(__file__), '..'))
 
 COMMON_WEBLOG_RE = re.compile(
@@ -41,11 +41,16 @@ COMMON_WEBLOG_RE = re.compile(
 
 
 class AutomationRunner:
-    def __init__(self, path_to_config):
-        if not path_to_config:
-            g8r_home = os.getenv('G8R_HOME') or DEFAULT_G8R_HOME
-            path_to_config = os.path.join(g8r_home, 'tree', DEFAULT_CONFIG_FILE)
-        self.path_to_config = path_to_config
+    def __init__(self, path_to_configs=None):
+        if not path_to_configs:
+            path_to_configs = DEFAULT_CONFIG_FILES
+
+        g8r_home = os.getenv('G8R_HOME') or DEFAULT_G8R_HOME
+        self.path_to_configs = []
+        for ptc in path_to_configs:
+            if not ptc.startswith('/'):
+                ptc = os.path.join(g8r_home, 'tree', ptc)
+            self.path_to_configs.append(ptc)
 
         self.sleep_seconds = 10
         self.log_files = []
@@ -69,13 +74,30 @@ class AutomationRunner:
             % (self.my_time(time.time()), something.rstrip()))
 
     def load_config(self):
+        config = {}
         try:
-            with open(self.path_to_config, 'r') as fd:
-                self.config = json.loads(fd.read())
+            for path in self.path_to_configs:
+                if os.path.exists(path):
+                    with open(path, 'r') as fd:
+                        cfg = json.loads(fd.read())
+                    if not config:
+                        config = cfg
+                        continue
+                    for k, v in cfg.items():
+                        if k not in config:
+                            config[k] = v
+                        elif isinstance(v, list):
+                            config[k].extend(v)
+                        elif isinstance(v, dict):
+                            config[k].update(v)
+                        else:
+                            config[k] = v
         except Exception as e:
             self.stderr('FAILED TO LOAD CONFIG: %s' % e)
+        if not config:
             return False
 
+        self.config = config
         self.sleep_seconds = self.config.get('sleep_seconds', self.sleep_seconds)
         self.log_files = self.config['log_files']
         self.log_events = self.config['log_events']
@@ -258,7 +280,7 @@ class AutomationRunner:
 
 if __name__ == '__main__':
     try:
-        ar = AutomationRunner(sys.argv[1] if (len(sys.argv) > 1) else None)
+        ar = AutomationRunner(sys.argv[1:])
         ar.loop()
     except KeyboardInterrupt:
         pass
