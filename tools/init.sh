@@ -15,13 +15,15 @@
 # Configure the static web-server
 #
 [ "${G8R_DEBUG:-n}" != "n" ] && set -x
+set -euo pipefail
 
-export G8R_HOME=${G8R_HOME:-"$(cd $(dirname $0)/..; pwd)"}
-export G8R_TOOLS="$G8R_HOME/tools"
-export G8R_TREE="$G8R_HOME/tree"
+G8R_HOME="${G8R_HOME:-$(cd "$(dirname "$0")"/.. && pwd)}"
+G8R_TOOLS="$G8R_HOME/tools"
+G8R_TREE="$G8R_HOME/tree"
 
-cd "${G8R_HOME}"
-export PATH="$(pwd):$(pwd)/tools:$PATH"
+cd "$G8R_HOME"
+PATH="$(pwd):$(pwd)/tools:$PATH"
+export PATH G8R_HOME G8R_TOOLS G8R_TREE
 
 cat <<tac >&2
 ##############################################################################
@@ -40,16 +42,15 @@ Press ENTER to continue.
 
 ##############################################################################
 tac
+# shellcheck disable=SC2162 ## We don't care about the user input
 read
 
-
-RANDCRAP=$(python3 -c \
-  'import os,base64;print(str(base64.urlsafe_b64encode(os.urandom(16)),"utf-8")[:12])')
 
 # These are the variables we are configuring
 g8r_governating_domain=example.org
 g8r_governator_hostname=g8r.example.org
 g8r_admin_email=root@example.org
+g8r_url_base="https://$g8r_governator_hostname/g8r-$g8r_governating_domain"
 g8r_vps_provider=linode
 g8r_init_have_webserver=N
 g8r_init_static_path=/var/www/html
@@ -60,22 +61,22 @@ g8r_metrics_secret=$(python3 -c \
 
 # Load any previous progress...
 OUTPUT="${G8R_TREE}/000_base.vars"
+# shellcheck disable=SC1090,SC1091
 [ -e "$OUTPUT" ] && source "$OUTPUT"
 
 # Guarantee we save on exit
 save() {
     g8r_metrics_secret_bcrypt=$(htpasswd -nbBC 10 "" "$g8r_metrics_secret" 2>/dev/null |tr -d ':\n')
-    cat <<tac >$OUTPUT
-g8r_governating_domain=${g8r_governating_domain}
-g8r_governator_hostname=${g8r_governator_hostname}
-g8r_admin_email=${g8r_admin_email}
-g8r_url_base=https://${g8r_governator_hostname}/g8r-${g8r_governating_domain}
-g8r_vps_provider=${g8r_vps_provider}
-g8r_metrics_secret=${g8r_metrics_secret}
-g8r_metrics_password_bcrypt="${g8r_metrics_secret_bcrypt}"
-
-g8r_init_have_webserver=${g8r_init_have_webserver}
-g8r_init_static_path=${g8r_init_static_path}
+    cat <<tac >"$OUTPUT"
+g8r_governating_domain='$g8r_governating_domain'
+g8r_governator_hostname='$g8r_governator_hostname'
+g8r_admin_email='$g8r_admin_email'
+g8r_url_base='https://$g8r_governator_hostname/g8r-$g8r_governating_domain'
+g8r_vps_provider='$g8r_vps_provider'
+g8r_metrics_secret='$g8r_metrics_secret'
+g8r_metrics_password_bcrypt='$g8r_metrics_secret_bcrypt'
+g8r_init_have_webserver='$g8r_init_have_webserver'
+g8r_init_static_path='${g8r_init_static_path}'
 tac
 }
 trap save EXIT
@@ -91,7 +92,7 @@ mcheck() {
     ok=$2
     if [ "$ok" = "" ]; then
         echo -e "\t${what}\tMISSING" >&2
-        let MISSING=$MISSING+1
+        MISSING=$(( MISSING + 1 ))
     else
         echo -e "\t${what}\tok" >&2
     fi
@@ -103,13 +104,13 @@ mcheck "rsync            " "$(which rsync)"
 mcheck "python: jinja2   " "$(python3 -c 'import jinja2; print("ok")' 2>/dev/null)"
 mcheck "python: markdown " "$(python3 -c 'import markdown; print("ok")' 2>/dev/null)"
 mcheck "python: yaml     " "$(python3 -c 'import yaml; print("ok")' 2>/dev/null)"
-if [ $MISSING = 0 ]; then
+if [ "$MISSING" = 0 ]; then
     for t in \
        "jinjatool        " \
        "automation_runner" \
        "update_variables " \
     ; do
-        mcheck "$t" $(cd tools; python3 -c "import $t; print('ok')")
+        mcheck "$t" "$(cd tools && python3 -c "import $t; print('ok')")"
     done
 fi
 if [ $MISSING -gt 0 ]; then
@@ -124,10 +125,10 @@ fi
 
 
 ask() {
-    q=$1
-    v=$2
-    d=$3
-    yn=$4
+    q=${1:-}
+    v=${2:-}
+    d=${3:-}
+    yn=${4:-}
     echo >&2
     if [ "$yn" != "" ]; then
         echo -n "$q [$yn]: " >&2
@@ -135,7 +136,7 @@ ask() {
         echo    "$q" >&2
         echo -n "   [$d]: " >&2
     fi
-    read answer
+    read -r answer
     [ "$answer" != "" ] && d="$answer"
     if [ "$yn" != "" ]; then
         case $d in
@@ -188,7 +189,8 @@ g8r_governator_hostname=$(ask \
     '5. What is the public DNS domain name of this host?' \
     g8r_governator_hostname $g8r_governator_hostname)
 
-save && source $OUTPUT
+# shellcheck disable=SC1090
+save && source "$OUTPUT"
 
 
 ##############################################################################
@@ -209,9 +211,9 @@ cd "$G8R_HOME" || exit 1
 exec ./g8r "\$@"
 tac
         chmod +x g8r-helper.tmp
-        sudo mv g8r-helper.tmp /usr/bin/${g8r_helper} && (
+        sudo mv g8r-helper.tmp /usr/bin/"$g8r_helper" && (
             echo -n "   "
-            ls -l /usr/bin/${g8r_helper}
+            ls -l /usr/bin/"$g8r_helper"
         ) >&2
     fi
 fi
@@ -219,9 +221,12 @@ fi
 
 # Create hosts-$DOMAIN in tree
 echo >&2
-g8r_hosts_dir="tree/hosts-${g8r_governating_domain}"
-[ -d "${g8r_hosts_dir}" ] || source <("${G8R_TOOLS}"/add-domain.sh ${g8r_governating_domain})
-echo "** OK: Created $ADDED_DOMAIN_DIR" >&2
+g8r_hosts_dir="tree/hosts-$g8r_governating_domain"
+if [ ! -d "$g8r_hosts_dir" ]; then
+    # shellcheck disable=SC1090,SC1091
+    source <(g8r add-domain "$g8r_governating_domain")
+    echo "** OK: Created $ADDED_DOMAIN_DIR" >&2
+fi
 
 
 # Create g8r-tools bundle in exposed/files

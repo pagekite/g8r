@@ -1,9 +1,10 @@
 #!/bin/bash
 [ "${G8R_DEBUG:-n}" != "n" ] && set -x
-G8R_HOME="${G8R_HOME:-$(cd $(dirname $0)/.. && pwd)}"
-cd "$G8R_HOME"
-export PATH="$(pwd):$(pwd)/tools:$PATH"
 set -e
+G8R_HOME="${G8R_HOME:-$(cd "$(dirname "$0")"/.. && pwd)}"
+cd "$G8R_HOME"
+PATH="$(pwd):$(pwd)/tools:$PATH"
+export PATH G8R_HOME
 
 if [ "$1" = "" ]; then
     cat "$G8R_HOME/docs/help/backups.txt"
@@ -16,6 +17,7 @@ if [ "$1" = "-a" ]; then
     exit 0
 fi
 
+# shellcheck disable=SC2048 ## We like expanding this white-space
 for TARGET_HOST in $*; do
     TARGET_SECRET=$(g8r host-secret "$TARGET_HOST")
     if ! cd "$G8R_HOME"/tree/hosts-*/"$TARGET_SECRET" 2>/dev/null ; then
@@ -25,7 +27,9 @@ for TARGET_HOST in $*; do
 done
 
 
+# shellcheck disable=SC2048,SC2154 ## We like expanding this white-space
 for TARGET_HOST in $*; do
+    # shellcheck disable=SC1090,SC1091
     source <(g8r host-cfg "$TARGET_HOST")
     [ "${host_g8r_secret}" = "" ] && exit 2
 
@@ -43,15 +47,15 @@ for TARGET_HOST in $*; do
     for backup in *.tgz; do
         BYTES=$(stat -c %s "$backup")
         MTIME=$(stat -c %X "$backup")
-        let TOTAL_BYTES=$TOTAL_BYTES+$BYTES
-        let TOTAL_FILES=$TOTAL_FILES+1
+        TOTAL_BYTES=$(( TOTAL_BYTES + BYTES ))
+        TOTAL_FILES=$(( TOTAL_FILES + 1 ))
         [ "$MTIME" -gt "$TOTAL_MTIME" ] && TOTAL_MTIME=$MTIME
         json_edit.py manifest-new.json \
-            "g8r_backups/$TARGET_HOST/TOTALS/ts" = $TOTAL_MTIME \
-            "g8r_backups/$TARGET_HOST/TOTALS/bytes" = $TOTAL_BYTES \
-            "g8r_backups/$TARGET_HOST/TOTALS/count" = $TOTAL_FILES \
-            "g8r_backups/$TARGET_HOST/$backup/bytes" = $BYTES \
-            "g8r_backups/$TARGET_HOST/$backup/ts" = $MTIME \
+            "g8r_backups/$TARGET_HOST/TOTALS/ts" = "$TOTAL_MTIME" \
+            "g8r_backups/$TARGET_HOST/TOTALS/bytes" = "$TOTAL_BYTES" \
+            "g8r_backups/$TARGET_HOST/TOTALS/count" = "$TOTAL_FILES" \
+            "g8r_backups/$TARGET_HOST/$backup/bytes" = "$BYTES" \
+            "g8r_backups/$TARGET_HOST/$backup/ts" = "$MTIME" \
             >/dev/null
     done
 

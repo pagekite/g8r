@@ -1,8 +1,10 @@
 #!/bin/bash
 [ "${G8R_DEBUG:-n}" != "n" ] && set -x
-G8R_HOME="${G8R_HOME:-$(cd $(dirname $0)/.. && pwd)}"
+set -e
+G8R_HOME="${G8R_HOME:-$(cd "$(dirname "$0")"/.. && pwd)}"
 cd "$G8R_HOME"
-export PATH="$(pwd):$(pwd)/tools:$PATH"
+PATH="$(pwd):$(pwd)/tools:$PATH"
+export PATH G8R_HOME
 
 [ "$1" = "" ] && cat "docs/help/add-domain.txt" && exit 1
 
@@ -41,5 +43,7 @@ cat <<tac >009_automation.json
 }
 tac
 
-echo ADDED_DOMAIN_DIR=\"$(pwd)\"
-echo ADDED_DOMAIN=\"${DOM}\"
+cat <<tac
+ADDED_DOMAIN_DIR="$(pwd)"
+ADDED_DOMAIN="${DOM}"
+tac

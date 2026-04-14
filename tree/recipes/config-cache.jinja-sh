@@ -3,7 +3,7 @@
 #
 {%- for k, v in all_vars(prefixes=['host_', 'g8r_']).items() %}
 {%-   if v is string or v is integer %}
-{{ k }}="{{ v }}"
+{{ k }}='{{ v|replace("'", "\\'")|safe }}'
 {%-   endif %}
 {%- endfor %}
 #EOF#

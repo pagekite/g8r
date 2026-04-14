@@ -4,7 +4,7 @@ set -e
 G8R_SCRIPT="$1"
 G8R_FRAGMENT="$2"
 
-if [ -x "$G8R_SCRIPT" -a "$G8R_FRAGMENT" != "" ]; then
+if [ -x "$G8R_SCRIPT" ] && [ "$G8R_FRAGMENT" != "" ]; then
 
     export G8R_FRAGMENT
     sed -e "0,/^$/ p; \
@@ -37,7 +37,7 @@ fi
 
 ## BEGIN_G8R_TEST ##
 echo "This is the TEST fragment - '$G8R_FRAGMENT' and '$G8R_SCRIPT' should be blank."
-if [ "$G8R_FRAGMENT" != "" -o "$G8R_SCRIPT" != "" ]; then
+if [ "$G8R_FRAGMENT" != "" ] || [ "$G8R_SCRIPT" != "" ]; then
     echo "Oops, test failed"
     exit 1
 else

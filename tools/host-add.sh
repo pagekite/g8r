@@ -1,14 +1,20 @@
 #!/bin/bash
 [ "${G8R_DEBUG:-n}" != "n" ] && set -x
-G8R_HOME="${G8R_HOME:-$(cd $(dirname $0)/.. && pwd)}"
+set -e
+G8R_HOME="${G8R_HOME:-$(cd "$(dirname "$0")"/.. && pwd)}"
+G8R_TREE="$G8R_HOME"/tree
 cd "$G8R_HOME"
-export PATH="$(pwd):$(pwd)/tools:$PATH"
+PATH="$(pwd):$(pwd)/tools:$PATH"
+export PATH G8R_HOME G8R_TREE
 
-cd tree || exit 100
+if [ "$1" = "" ] || [ "$2" = "" ] || [ ! -d "skeletons/$2" ]; then
+    cat "../docs/help/add-host.txt" >&2
+    exit 1
+fi
+
+cd tree
+# shellcheck disable=SC1090,SC1091
 source 000_base.vars
-[ "$1" = "" -o "$2" = "" -o ! -d "skeletons/$2" ] && cat "../docs/help/add-host.txt" && exit 1 || true
-
-G8R_TREE="$(pwd)"
 
 HOST_NAME="$1"
 HOST_TYPE="$2"
@@ -17,31 +23,30 @@ HOST_RANDCRAP=$(python3 -c \
   'import os,base64;print(str(base64.urlsafe_b64encode(os.urandom(16)),"utf-8")[:12])')
 HOST_SECRET="${HOST_TYPE}-${HOST_NAME}-${HOST_RANDCRAP}"
 
-DIR="hosts-${HOST_DOMAIN}/$HOST_SECRET"
-EXISTING=$(cd hosts-${HOST_DOMAIN}; ls -1 |grep "${HOST_TYPE}-${HOST_NAME}")
+HOST_DIR="hosts-${HOST_DOMAIN}/$HOST_SECRET"
+# shellcheck disable=SC2010
+EXISTING=$(cd hosts-"$HOST_DOMAIN"; ls -1 |grep "${HOST_TYPE}-${HOST_NAME}-" || true)
 if [ "$EXISTING" != "" ]; then
     echo "Already exists: $EXISTING" >&2
     [ "$FORCE_ADD" = "" ] && exit 2
 fi
 set -e
 
-mkdir -p "$DIR" || exit 2
-cd "$DIR"
-DIR="$(pwd)"
-
-HOST_INDEX=$(cd ..; ls -1 */host.json |wc -l)
+mkdir -p "$HOST_DIR" || exit 2
+cd "$HOST_DIR"
+# shellcheck disable=SC2012
+HOST_INDEX=$(cd .. && ls -1d -- */host.json 2>/dev/null |wc -l || echo 0)
+HOST_DIR="$(pwd)"
 
 cp -a "../../skeletons/${HOST_TYPE}/." .
 cat <<tac >000_base.vars
-host_name=${HOST_NAME}
-host_type=${HOST_TYPE}
-host_index=${HOST_INDEX}
-host_ipv4=$IPv4
-host_ipv6=$IPv6
-host_updates="${HOST_UPDATES:-default}"
-host_update_schedule="${HOST_UPDATE_SCHEDULE:-weekly}"
-host_backups="${BACKUPS:-tgz:auto}"
-host_g8r_secret=${HOST_SECRET}
+host_name='${HOST_NAME}'
+host_type='${HOST_TYPE}'
+host_index='${HOST_INDEX}'
+host_updates='${HOST_UPDATES:-default}'
+host_update_schedule='${HOST_UPDATE_SCHEDULE:-weekly}'
+host_backups='${BACKUPS:-tgz:auto}'
+host_g8r_secret='${HOST_SECRET}'
 tac
 
 json_edit.py \
@@ -51,26 +56,30 @@ json_edit.py \
        "g8r_hosts/${HOST_NAME}" remove "ipv4" \
        "g8r_hosts/${HOST_NAME}" remove "ipv6" >/dev/null
 
+# shellcheck disable=SC2154
 if [ "$IPv4" != "" ]; then
     json_edit.py \
         host.json \
-            "g8r_hosts/${HOST_NAME}/ipv4" append "${IPv4}" >/dev/null
+            "g8r_hosts/${HOST_NAME}/ipv4" append "$IPv4" >/dev/null
 fi
+# shellcheck disable=SC2154
 if [ "$IPv6" != "" ]; then
     json_edit.py \
         host.json \
-            "g8r_hosts/${HOST_NAME}/ipv6" append "${IPv6}" >/dev/null
+            "g8r_hosts/${HOST_NAME}/ipv6" append "$IPv6" >/dev/null
 fi
 
 cd "$G8R_TREE/../exposed/hosts" || exit 3
-ln -fs "$DIR" . || exit 4
+ln -fs "$HOST_DIR" . || exit 4
 
-echo ADDED_HOST_DIR=\"$DIR\"
-echo ADDED_HOST_SECRET=\"${HOST_SECRET}\"
-echo ADDED_HOST_TYPE=\"${HOST_TYPE}\"
-echo ADDED_HOST_NAME=\"${HOST_NAME}\"
+cat <<tac
+ADDED_HOST_DIR='$HOST_DIR'
+ADDED_HOST_SECRET='$HOST_SECRET'
+ADDED_HOST_TYPE='$HOST_TYPE'
+ADDED_HOST_NAME='$HOST_NAME'
+tac
 if [ ! "$ADD_CANARY" = "" ]; then
     cd "$G8R_TREE/canaries"
-    ln -s "$DIR" .
-    echo ADDED_CANARY=\"${HOST_SECRET}\"
+    [ -e "$HOST_DIR" ] || ln -s "$HOST_DIR" .
+    echo "ADDED_CANARY='$HOST_SECRET'"
 fi

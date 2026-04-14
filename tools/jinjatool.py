@@ -373,7 +373,7 @@ class JinjaToolExtension(Extension):
             if '=' not in line:
                 continue
             var, val = line.split('=', 1)
-            vdict[var.strip()] = val.strip().strip('"')
+            vdict[var.strip()] = val.strip().strip("\"'")
         return vdict
 
     def _from_metrics(self, data):
@@ -383,7 +383,7 @@ class JinjaToolExtension(Extension):
                 if not line.strip():
                     continue
                 var, val = [v.strip() for v in line.split('=', 1)]
-                val = val.strip('"')
+                val = val.strip("\"'")
                 try:
                     if ' ' in val:
                         val = [int(v) for v in val.split()]
@@ -446,7 +446,7 @@ def Main():
                         line = line.split('#')[0]
                         if '=' in line:
                             k, v = line.split('=', 1)
-                            variables[k.strip()] = v.strip().strip('"')
+                            variables[k.strip()] = v.strip().strip("\"'")
 
     for arg in sys.argv[1:]:
 
