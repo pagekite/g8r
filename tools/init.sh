@@ -45,7 +45,6 @@ tac
 # shellcheck disable=SC2162 ## We don't care about the user input
 read
 
-
 # These are the variables we are configuring
 g8r_governating_domain=example.org
 g8r_governator_hostname=g8r.example.org
@@ -55,9 +54,8 @@ g8r_vps_provider=linode
 g8r_init_have_webserver=N
 g8r_init_static_path=/var/www/html
 g8r_metrics_secret=$(python3 -c \
-  'import os,base64;print(str(base64.urlsafe_b64encode(os.urandom(16)),"utf-8")[:12])' \
-  2>/dev/null || echo governator)
-
+    'import os,base64;print(str(base64.urlsafe_b64encode(os.urandom(16)),"utf-8")[:12])' \
+    2>/dev/null || echo governator)
 
 # Load any previous progress...
 OUTPUT="${G8R_TREE}/000_base.vars"
@@ -66,7 +64,7 @@ OUTPUT="${G8R_TREE}/000_base.vars"
 
 # Guarantee we save on exit
 save() {
-    g8r_metrics_secret_bcrypt=$(htpasswd -nbBC 10 "" "$g8r_metrics_secret" 2>/dev/null |tr -d ':\n')
+    g8r_metrics_secret_bcrypt=$(htpasswd -nbBC 10 "" "$g8r_metrics_secret" 2>/dev/null | tr -d ':\n')
     cat <<tac >"$OUTPUT"
 g8r_governating_domain='$g8r_governating_domain'
 g8r_governator_hostname='$g8r_governator_hostname'
@@ -81,9 +79,7 @@ tac
 }
 trap save EXIT
 
-
 ##############################################################################
-
 
 echo -e '** Checking dependencies ...\n' >&2
 MISSING=0
@@ -92,7 +88,7 @@ mcheck() {
     ok=$2
     if [ "$ok" = "" ]; then
         echo -e "\t${what}\tMISSING" >&2
-        MISSING=$(( MISSING + 1 ))
+        MISSING=$((MISSING + 1))
     else
         echo -e "\t${what}\tok" >&2
     fi
@@ -106,10 +102,9 @@ mcheck "python: markdown " "$(python3 -c 'import markdown; print("ok")' 2>/dev/n
 mcheck "python: yaml     " "$(python3 -c 'import yaml; print("ok")' 2>/dev/null)"
 if [ "$MISSING" = 0 ]; then
     for t in \
-       "jinjatool        " \
-       "automation_runner" \
-       "update_variables " \
-    ; do
+        "jinjatool        " \
+        "automation_runner" \
+        "update_variables "; do
         mcheck "$t" "$(cd tools && python3 -c "import $t; print('ok')")"
     done
 fi
@@ -120,9 +115,7 @@ else
     echo -e '\n** OK: Dependencies look good, off we go!' >&2
 fi
 
-
 ##############################################################################
-
 
 ask() {
     q=${1:-}
@@ -133,17 +126,19 @@ ask() {
     if [ "$yn" != "" ]; then
         echo -n "$q [$yn]: " >&2
     else
-        echo    "$q" >&2
+        echo "$q" >&2
         echo -n "   [$d]: " >&2
     fi
     read -r answer
     [ "$answer" != "" ] && d="$answer"
     if [ "$yn" != "" ]; then
         case $d in
-            Y*|y*) d=Y
-            ;;
-            *) d=N
-            ;;
+            Y* | y*)
+                d=Y
+                ;;
+            *)
+                d=N
+                ;;
         esac
     fi
     echo "   OK, set $v=$d" >&2
@@ -192,9 +187,7 @@ g8r_governator_hostname=$(ask \
 # shellcheck disable=SC1090
 save && source "$OUTPUT"
 
-
 ##############################################################################
-
 
 # Create g8r-$DOMAIN helper tool
 g8r_helper=g8r-${g8r_governating_domain}
@@ -218,7 +211,6 @@ tac
     fi
 fi
 
-
 # Create hosts-$DOMAIN in tree
 echo >&2
 g8r_hosts_dir="tree/hosts-$g8r_governating_domain"
@@ -228,12 +220,10 @@ if [ ! -d "$g8r_hosts_dir" ]; then
     echo "** OK: Created $ADDED_DOMAIN_DIR" >&2
 fi
 
-
 # Create g8r-tools bundle in exposed/files
 echo >&2
 tar cfz exposed/files/g8r-tools.tar.gz g8r tools/*.py tools/{metrics,healthy,fragment-run}.sh
 echo "** OK: Created: $(ls -1hs exposed/files/g8r-tools.tar.gz)" >&2
-
 
 # Create the symbolic link for exposing things to the web
 echo >&2
@@ -263,7 +253,6 @@ else
     rm -f "${G8R_HOME}/exposed/check.txt"
 fi
 
-
 cat <<tac >&2
 
 ##############################################################################
@@ -285,4 +274,3 @@ Then add some servers!
 
 ##############################################################################
 tac
-

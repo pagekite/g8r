@@ -10,8 +10,8 @@ if [ -x "$G8R_SCRIPT" ] && [ "$G8R_FRAGMENT" != "" ]; then
     sed -e "0,/^$/ p; \
             /BEGIN_G8R_${G8R_FRAGMENT}/,/END_G8R_${G8R_FRAGMENT}/ p; \
             d" \
-      <"$G8R_SCRIPT" \
-      |bash
+        <"$G8R_SCRIPT" \
+        | bash
 
     exit 0
 else

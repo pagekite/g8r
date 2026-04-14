@@ -20,12 +20,15 @@ HOST_NAME="$1"
 HOST_TYPE="$2"
 HOST_DOMAIN="${3:-$g8r_governating_domain}"
 HOST_RANDCRAP=$(python3 -c \
-  'import os,base64;print(str(base64.urlsafe_b64encode(os.urandom(16)),"utf-8")[:12])')
+    'import os,base64;print(str(base64.urlsafe_b64encode(os.urandom(16)),"utf-8")[:12])')
 HOST_SECRET="${HOST_TYPE}-${HOST_NAME}-${HOST_RANDCRAP}"
 
 HOST_DIR="hosts-${HOST_DOMAIN}/$HOST_SECRET"
 # shellcheck disable=SC2010
-EXISTING=$(cd hosts-"$HOST_DOMAIN"; ls -1 |grep "${HOST_TYPE}-${HOST_NAME}-" || true)
+EXISTING=$(
+    cd hosts-"$HOST_DOMAIN"
+    ls -1 | grep "${HOST_TYPE}-${HOST_NAME}-" || true
+)
 if [ "$EXISTING" != "" ]; then
     echo "Already exists: $EXISTING" >&2
     [ "$FORCE_ADD" = "" ] && exit 2
@@ -35,7 +38,7 @@ set -e
 mkdir -p "$HOST_DIR" || exit 2
 cd "$HOST_DIR"
 # shellcheck disable=SC2012
-HOST_INDEX=$(cd .. && ls -1d -- */host.json 2>/dev/null |wc -l || echo 0)
+HOST_INDEX=$(cd .. && ls -1d -- */host.json 2>/dev/null | wc -l || echo 0)
 HOST_DIR="$(pwd)"
 
 cp -a "../../skeletons/${HOST_TYPE}/." .
@@ -51,22 +54,22 @@ tac
 
 json_edit.py \
     host.json \
-       "g8r_hosts/${HOST_NAME}/secret" = "${HOST_SECRET}" \
-       "g8r_hosts/${HOST_NAME}/type" = "${HOST_TYPE}" \
-       "g8r_hosts/${HOST_NAME}" remove "ipv4" \
-       "g8r_hosts/${HOST_NAME}" remove "ipv6" >/dev/null
+    "g8r_hosts/${HOST_NAME}/secret" = "${HOST_SECRET}" \
+    "g8r_hosts/${HOST_NAME}/type" = "${HOST_TYPE}" \
+    "g8r_hosts/${HOST_NAME}" remove "ipv4" \
+    "g8r_hosts/${HOST_NAME}" remove "ipv6" >/dev/null
 
 # shellcheck disable=SC2154
 if [ "$IPv4" != "" ]; then
     json_edit.py \
         host.json \
-            "g8r_hosts/${HOST_NAME}/ipv4" append "$IPv4" >/dev/null
+        "g8r_hosts/${HOST_NAME}/ipv4" append "$IPv4" >/dev/null
 fi
 # shellcheck disable=SC2154
 if [ "$IPv6" != "" ]; then
     json_edit.py \
         host.json \
-            "g8r_hosts/${HOST_NAME}/ipv6" append "$IPv6" >/dev/null
+        "g8r_hosts/${HOST_NAME}/ipv6" append "$IPv6" >/dev/null
 fi
 
 cd "$G8R_TREE/../exposed/hosts" || exit 3

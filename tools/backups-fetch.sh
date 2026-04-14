@@ -11,7 +11,7 @@ if [ "$1" = "" ]; then
     exit 1
 fi
 if [ "$1" = "-a" ]; then
-    for HOST in $("$G8R_HOME"/g8r hosts |awk '{print $4}'); do
+    for HOST in $("$G8R_HOME"/g8r hosts | awk '{print $4}'); do
         backups-fetch.sh "$HOST" || true
     done
     exit 0
@@ -20,12 +20,11 @@ fi
 # shellcheck disable=SC2048 ## We like expanding this white-space
 for TARGET_HOST in $*; do
     TARGET_SECRET=$(g8r host-secret "$TARGET_HOST")
-    if ! cd "$G8R_HOME"/tree/hosts-*/"$TARGET_SECRET" 2>/dev/null ; then
+    if ! cd "$G8R_HOME"/tree/hosts-*/"$TARGET_SECRET" 2>/dev/null; then
         echo "Unknown host: $TARGET_HOST"
         exit 1
     fi
 done
-
 
 # shellcheck disable=SC2048,SC2154 ## We like expanding this white-space
 for TARGET_HOST in $*; do
@@ -39,7 +38,7 @@ for TARGET_HOST in $*; do
     cd "$TARGET_DIR"
 
     rsync -a --rsh="ssh -p ${g8r_sshd_port:-22} -o ConnectTimeout=5" \
-      root@"$TARGET_HOSTNAME":/var/lib/g8r/backups/. .
+        root@"$TARGET_HOSTNAME":/var/lib/g8r/backups/. .
 
     TOTAL_FILES=0
     TOTAL_BYTES=0
@@ -47,8 +46,8 @@ for TARGET_HOST in $*; do
     for backup in *.tgz; do
         BYTES=$(stat -c %s "$backup")
         MTIME=$(stat -c %X "$backup")
-        TOTAL_BYTES=$(( TOTAL_BYTES + BYTES ))
-        TOTAL_FILES=$(( TOTAL_FILES + 1 ))
+        TOTAL_BYTES=$((TOTAL_BYTES + BYTES))
+        TOTAL_FILES=$((TOTAL_FILES + 1))
         [ "$MTIME" -gt "$TOTAL_MTIME" ] && TOTAL_MTIME=$MTIME
         json_edit.py manifest-new.json \
             "g8r_backups/$TARGET_HOST/TOTALS/ts" = "$TOTAL_MTIME" \

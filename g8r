@@ -41,7 +41,7 @@ case "$COMMAND" in
         host_name=${target/%.*/}
         host_domain=${target/#${host_name}./}
         [ "$host_domain" = "$host_name" ] \
-          && host_domain="${g8r_governating_domain:?Default domain unset, please run: g8r init}"
+            && host_domain="${g8r_governating_domain:?Default domain unset, please run: g8r init}"
 
         if cd tree/hosts-"$host_domain" 2>/dev/null; then
             host_secret=$(jq .g8r_hosts."$host_name".secret config-cache.json)
@@ -50,7 +50,7 @@ case "$COMMAND" in
                 echo "$host_secret"
                 exit 0
             fi
-        fi 
+        fi
         echo "Host not found for '$target'" >&2
         exit 1
         ;;
@@ -65,8 +65,8 @@ case "$COMMAND" in
             target_dir=$(pwd)
             ln -s ../../recipes/config-cache.jinja-$T .g8r-tmp-$$.jinja-$T
             (cd "$G8R_HOME/tree" \
-              && make "$target_dir"/.g8r-tmp-$$.$T >/dev/null \
-              && cat "$target_dir"/.g8r-tmp-$$.$T)
+                && make "$target_dir"/.g8r-tmp-$$.$T >/dev/null \
+                && cat "$target_dir"/.g8r-tmp-$$.$T)
             rm -f .g8r-tmp-*
             exit 0
         fi
@@ -192,15 +192,15 @@ case "$COMMAND" in
             cd "$G8R_HOME"
             G8R_TS=$(date +%Y%d%mT%H%M%S)
             G8R_ARCHIVED=logs/"${G8R_TS}-${G8R_SCRIPT}"
-            G8R_DONE=logs/RAN.$(md5sum "${G8R_S_PATH}" |cut -b1-32)
+            G8R_DONE=logs/RAN.$(md5sum "${G8R_S_PATH}" | cut -b1-32)
             if [ -e "$G8R_DONE" ] && [ "$G8R_FORCE" = "n" ]; then
                 echo "Skipped, already ran: ${G8R_SCRIPT}"
             else
                 (
                     cp -va "$G8R_S_PATH" "${G8R_ARCHIVED}"
                     bash "${G8R_ARCHIVED}" "$@" && touch "${G8R_DONE}"
-                )\
-                    2>&1 |tee logs/"${G8R_TS}-${G8R_SCRIPT}.log"
+                ) \
+                    2>&1 | tee logs/"${G8R_TS}-${G8R_SCRIPT}.log"
             fi
         else
             echo "Not found: $G8R_S_PATH" >&2
@@ -209,6 +209,7 @@ case "$COMMAND" in
         ;;
 
     help)
+        NOT_FOUND=
         if [ "$COMMAND" = "help" ] && [ "${1:-}" != "" ]; then
             cat "$G8R_HOME/docs/help/$1.txt" 2>/dev/null && exit 0
             NOT_FOUND="$1"
@@ -259,7 +260,7 @@ tac
                 echo "-------------------------- -- --- - - -- -- -  -"
                 echo "Oops! Topic not found: $1"
             fi
-        ) |$PAGER
+        ) | $PAGER
         [ "$NOT_FOUND" != "" ] && exit 99
         ;;
 

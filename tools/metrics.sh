@@ -19,6 +19,8 @@ while [ "$3" != "" ]; do
 g8r_${METRIC} ${MVAL}
 
 tac
-    shift; shift; shift
+    shift
+    shift
+    shift
 done
 mv -f "g8r_${METRIC_GROUP}.prom.tmp" "g8r_${METRIC_GROUP}.prom"

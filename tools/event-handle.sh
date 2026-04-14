@@ -6,14 +6,13 @@ cd "$G8R_HOME"
 PATH="$(pwd):$(pwd)/tools:$PATH"
 export PATH G8R_HOME
 
-
 EVENT="$1"
 HOST=${2//./-}
 if [ "$HOST" = "" ]; then
     echo "Usage: $0 <event> <host> [<ip> [<log-time>]]" >&2
     exit 1
 fi
-if ! cd tree/hosts-*/"$HOST" 2>/dev/null ; then
+if ! cd tree/hosts-*/"$HOST" 2>/dev/null; then
     echo "Unknown host: $HOST" >&2
     exit 2
 fi
@@ -21,15 +20,13 @@ fi
 source <(g8r host-cfg "$HOST")
 cd "$G8R_HOME"
 
-
-R_IP="$(echo "$3" |sed -e 's/^::ffff://; s/[^a-fA-F0-9:\.]//g')"
-L_TS="$(echo "$4" |sed -e 's/:/ /; s,/, ,g')"
+R_IP="$(echo "$3" | sed -e 's/^::ffff://; s/[^a-fA-F0-9:\.]//g')"
+L_TS="$(echo "$4" | sed -e 's/:/ /; s,/, ,g')"
 
 if [ "$L_TS" != "" ] && [ "$NOW" = "" ]; then
-    NOW=$(date +%s --date "$L_TS")    
+    NOW=$(date +%s --date "$L_TS")
 fi
 NOW=${NOW:-$(date +%s)}
-
 
 # All events update /seen/
 if [ "$R_IP" != "" ]; then
