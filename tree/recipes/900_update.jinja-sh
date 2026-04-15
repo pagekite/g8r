@@ -16,7 +16,7 @@ UPDATE=$(date +%Y%m%d%H%M)
 #
 mkdir -p /var/lib/g8r/scripts/versions /var/lib/g8r/logs
 
-cd /var/lib/g8r/scripts
+cd /var/lib/g8r/scripts || exit 1
 wget \
     -r -N -nd -4 \
     -e robots=off \
@@ -24,25 +24,26 @@ wget \
     {{ g8r_url_base }}/hosts/{{ host_g8r_secret }}/
 
 for html in *.html; do
-    if [ -e ${html}.1 ]; then
-        mv ${html}.1 ${html}
+    if [ -e "${html}.1" ]; then
+        mv "${html}.1" "${html}"
     fi
 done
 
 for script in *.sh; do
-    if [ -e ${script}.1 ]; then
-        mv ${script}.1 versions/${script}.$UPDATE
-        ln -f versions/${script}.$UPDATE ${script}
+    if [ -e "${script}.1" ]; then
+        mv "${script}.1" versions/"${script}.$UPDATE"
+        ln -f versions/"${script}.$UPDATE" "${script}"
     fi
 done
-chmod +x *.sh
+chmod +x -- *.sh
 
 
 #############################################################################
 # Run any scripts which are new or have changed
 #
-cd /var/lib/g8r/scripts
-for script in $(ls -1 1*.sh |sort); do
+cd /var/lib/g8r/scripts || exit 1
+# shellcheck disable=SC2012
+for script in $(ls -1d -- 1*.sh |sort); do
     export G8R_FRAGMENT=update
     /bin/g8r run "${script}"
 done

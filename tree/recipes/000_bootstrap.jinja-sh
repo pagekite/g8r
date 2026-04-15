@@ -34,9 +34,9 @@ chmod go-rwx /root/.ssh /root/.ssh/authorized_keys
 # Reconfigure SSHD to listen on Port {{ g8r_sshd_port }} + hardening
 #
 SC=/etc/ssh/sshd_config
-if [ $(grep -c '^Port {{ g8r_sshd_port }}' $SC) -lt 1 ]; then
-    perl -i -pe 's/^(Port|PermitRootLogin|RSAAuth|PubkeyAuth)/#\1/' $SC
-    cat <<tac >>$SC
+if [ "$(grep -c '^Port {{ g8r_sshd_port }}' "$SC")" -lt 1 ]; then
+    perl -i -pe 's/^(Port|PermitRootLogin|RSAAuth|PubkeyAuth)/#\1/' "$SC"
+    cat <<tac >>"$SC"
 ##[ Customizations by Governator ]##########################################
 #
 Port {{ g8r_sshd_port }}

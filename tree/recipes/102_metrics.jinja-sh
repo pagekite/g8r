@@ -45,6 +45,7 @@ cat <<tac >/etc/prometheus-node-exporter.web.yaml
 # How: htpasswd -nBC 10 "" | tr -d ':\n'
 basic_auth_users:
 tac
+# shellcheck disable=SC2016
 echo '  governator: "{{ g8r_metrics_password_bcrypt|default('$2y$10$d0eMuR3u721fFceczqOr1u1CeXM4cWbn59QHQI6NvqJ5QH1ZzeP52')|safe }}"' \
     >>/etc/prometheus-node-exporter.web.yaml
 

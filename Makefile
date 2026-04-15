@@ -1,6 +1,11 @@
 default:
 	@./g8r make
 
+check: codeclean checktree
+
+checktree: default
+	shellcheck tree/hosts-*/*.sh tree/hosts-*/*/*.sh
+
 codeclean: shfmt shellcheck
 	@true
 

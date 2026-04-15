@@ -111,8 +111,8 @@ systemctl reload caddy || systemctl start caddy
 
 
 # Expose as metric that this update happened
-/var/lib/g8r/tools/metrics.sh caddy_updated caddy_updated gauge $(date +%s)
-/var/lib/g8r/tools/metrics.sh caddy_health0 caddy_health0 gauge $(date +%s)
+/var/lib/g8r/tools/metrics.sh caddy_updated caddy_updated gauge "$(date +%s)"
+/var/lib/g8r/tools/metrics.sh caddy_health0 caddy_health0 gauge "$(date +%s)"
 
 
 ###################################################[BEGIN_G8R_HEALTH_CHECK]###
@@ -144,7 +144,7 @@ if [ "$HEALTHY" = "y" ]; then
 else
     # Reset our updated gauge - it can be used to calculate how long we have
     # been continuously healthy.
-    /var/lib/g8r/tools/metrics.sh caddy_health0 caddy_health0 gauge $(date +%s)
+    /var/lib/g8r/tools/metrics.sh caddy_health0 caddy_health0 gauge "$(date +%s)"
 fi
 #END_G8R_HEALTH_CHECK#
 

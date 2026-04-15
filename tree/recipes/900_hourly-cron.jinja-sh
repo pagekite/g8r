@@ -19,7 +19,7 @@ HOUR="${HOUR:-$(date +'h%H')}"        # Hour only
 # If we've been up and running for less than 1.5 hours, assume we recently
 # got rebooted and request an undrain.
 #
-let UPTIME=$(date +%s)-$(date +%s --date "$(uptime -s)")
+UPTIME=$(( "$(date +%s)" - "$(date +%s --date "$(uptime -s)")" ))
 if [ "$UPTIME" -lt 5400 ]; then
     curl -s "${G8R_PING_URL}?undrain={{ host_g8r_secret }}" || true
 fi
