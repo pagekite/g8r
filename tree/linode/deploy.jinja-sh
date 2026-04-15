@@ -1,6 +1,8 @@
 #!/bin/bash
-cd "$(dirname $0)"
-[ "$1" = "" -o ! -d "../../exposed/hosts/$1" ] && cat <<tac && exit 1
+# shellcheck disable=SC2154
+cd "$(dirname "$0")" || exit 1
+if [ "$1" = "" ] || [ ! -d "../../exposed/hosts/$1" ]; then
+    cat <<tac
 Usage: deploy.sh <host-secret>
 
 This will create a new linode, bootstrapped as the host defined by
@@ -9,9 +11,11 @@ This will create a new linode, bootstrapped as the host defined by
 You must have the \`linode-cli\` tool on your PATH for this to work,
 and be authenticated with permission to create new linodes.
 tac
+    exit 1
+fi
 
-G8R_TREE="$(cd ..; pwd)"
-G8R_TOOLS="$(cd ../../tools; pwd)"
+G8R_TREE="$(cd .. && pwd)"
+G8R_TOOLS="$(cd ../../tools && pwd)"
 
 HOST_DIR="../../exposed/hosts/$1"
 HOST_SECRET="$1"
@@ -31,8 +35,9 @@ if [ "$STACKSCRIPT" = "" ]; then
     exit 4
 fi
 
+# shellcheck disable=SC2001
 linode-cli linodes create --json \
-    --label="$(echo $HOST_SECRET | sed -e 's/-[^-]*$//')" \
+    --label="$(echo "$HOST_SECRET" | sed -e 's/-[^-]*$//')" \
     --booted=true \
     --root_pass="$ROOT_PASSWD" \
     --stackscript_id="$STACKSCRIPT" \
@@ -40,17 +45,18 @@ linode-cli linodes create --json \
     |jq --indent 2 '.[0]' \
     |tee "$HOST_DIR/linode-new.json"
 
-cd $HOST_DIR
+cd "$HOST_DIR" || exit 1
 IPv6="$(jq --indent 0 .ipv6 linode-new.json 2>/dev/null |sed -e s,/128,,)"
 IPv4="$(jq --indent 0 '.ipv4[0]' linode-new.json 2>/dev/null)"
 
-if [ "$IPv4" = "" -o "$IPv4" = null ]; then
+if [ "$IPv4" = "" ] || [ "$IPv4" = null ]; then
     echo 'Sorry, could not figure out host IP address. Aborting.' >&2
     rm -f "$HOST_DIR/linode-new.json"
     exit 6
 fi
 
 mv -f linode-new.json linode.json
+# shellcheck disable=SC1090,SC1091
 source <(g8r host-cfg "$HOST_SECRET")
 
 "${G8R_TOOLS}"/json_edit.py \
@@ -69,6 +75,6 @@ if [ "$IPv6" != "" ]; then
             "g8r_hosts/${host_name}/ipv6" append "${IPv6}"
 fi
 
-cd "$G8R_TREE"
+cd "$G8R_TREE" || exit 1
 "${G8R_TOOLS}"/update_variables.py
 make

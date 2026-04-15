@@ -1,10 +1,13 @@
 default:
+	@echo "Try 'make rebuild' or 'make check' ..."
+
+rebuild:
 	@./g8r make
 
 check: codeclean checktree
 
-checktree: default
-	shellcheck tree/hosts-*/*.sh tree/hosts-*/*/*.sh
+checktree: rebuild
+	find tree -type f -name \*.sh |xargs shellcheck
 
 codeclean: shfmt shellcheck
 	@true

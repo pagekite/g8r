@@ -8,7 +8,7 @@ set -e
 
 # Wait for the network...
 date
-while [ $(ip addr |grep -v inet6 |grep -c global) -lt 1 ]; do
+while [ "$(ip addr |grep -v inet6 |grep -c global)" -lt 1 ]; do
     sleep 10
     date
 done
@@ -20,5 +20,5 @@ ping -c2 {{ g8r_governator_hostname }} || ping -c5 {{ g8r_governator_hostname }}
 
 mkdir -p /var/lib/g8r/scripts
 cd /var/lib/g8r/scripts
-curl {{ g8r_url_base }}/hosts/${G8R_ID:-ANY}/000_bootstrap.sh >000_bootstrap.sh
+curl "{{ g8r_url_base }}/hosts/${G8R_ID:-ANY}/000_bootstrap.sh" >000_bootstrap.sh
 bash 000_bootstrap.sh

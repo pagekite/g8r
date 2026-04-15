@@ -7,7 +7,7 @@ and be authenticated with permission to create stackscripts.
 
 Press ENTER to continue, CTRL+C to abort.
 tac
-read
+read -r
 if [ "$(which linode-cli)" = "" ]; then
     echo 'Sorry, linode-cli not found on your PATH. Aborting.'
     exit 1
@@ -24,6 +24,7 @@ else
     SCRIPT_WHAT="update"
 fi
 
+# shellcheck disable=2086 ## Deliberatly expanding $SCRIPT_ARG
 linode-cli stackscripts $SCRIPT_WHAT --json \
     --label "{{ g8r_governating_domain }}-g8r-{{ g8r_governator_hostname }}" \
     --description "Governator bootstrap script for {{ g8r_governating_domain }} via {{ g8r_governator_hostname }}" \
