@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC2034
+# shellcheck disable=SC2034,SC2016
 #
 # These are the current string/int variables for use within shell scripts.
 # See config.json for more complex data.

@@ -47,17 +47,20 @@ if [ "$HOUR" = "h05" ]; then
     TGZ_BACKUPS="{{ tgz_backups }}"
     for SCRIPT in $(g8r ls); do
         G8R_TGZ_BACKUPS=""
+        # shellcheck disable=SC1090,SC1091
         source <(fragment-run.sh "$G8R_SCRIPTS/$SCRIPT" BACKUPS)
         TGZ_BACKUPS="$G8R_TGZ_BACKUPS $TGZ_BACKUPS"
     done
 
+    # shellcheck disable=SC2086,SC2116 ## Deliberatey globbing $TGZ_BACKUPS!
     if [ "$(echo $TGZ_BACKUPS)" != "" ]; then
-        tar cvfz ${G8R_BACKUPS}/backups-${NOW}.tgz $TGZ_BACKUPS \
-          || rm -f ${G8R_BACKUPS}/backups-${NOW}.tgz \
+        # shellcheck disable=SC2086 ## Deliberatey globbing $TGZ_BACKUPS!
+        tar cvfz "$G8R_BACKUPS/backups-${NOW}".tgz $TGZ_BACKUPS \
+          || rm -f "$G8R_BACKUPS/backups-${NOW}".tgz \
 
-        [ -e "${G8R_BACKUPS}/backups-${NOW}.tgz" ] \
-          && curl -s "${G8R_PING_URL}?backup_ready={{ host_g8r_secret }}" \
-          || true
+        if [ -e "$G8R_BACKUPS/backups-${NOW}.tgz" ]; then
+            curl -s "$G8R_PING_URL?backup_ready={{ host_g8r_secret }}" || true
+        fi
     fi
 fi
 {%- else %}# No backups configured. See: g8r help backups
