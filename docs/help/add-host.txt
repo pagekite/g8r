@@ -17,12 +17,12 @@ set `UPDATES=n`.
 
 Examples:
 
-    g8r add-domain www web
+    g8r add-host www web
 
-    g8r add-domain www web example.org
+    g8r add-host www web example.org
 
-    IPv4=10.1.2.3 IPv6=::1 g8r add-domain www web
+    IPv4=10.1.2.3 IPv6=::1 g8r add-host www web
 
     export UPDATES=n
     export BACKUPS="tgz:/var/lib/special-data rsync:users rsync:/var/log"
-    g8r add-domain www web
+    g8r add-host www web

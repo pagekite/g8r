@@ -44,7 +44,7 @@ case "$COMMAND" in
             && host_domain="${g8r_governating_domain:?Default domain unset, please run: g8r init}"
 
         if cd tree/hosts-"$host_domain" 2>/dev/null; then
-            host_secret=$(jq .g8r_hosts."$host_name".secret config-cache.json)
+            host_secret=$(jq .g8r_hosts"[\"$host_name\"]".secret config-cache.json)
             host_secret=${host_secret//\"/}
             if [ "$host_secret" != "" ] && [ "$host_secret" != null ]; then
                 echo "$host_secret"
@@ -82,10 +82,10 @@ case "$COMMAND" in
                     host_secret=${host_dir/#*\//}
                     # shellcheck disable=SC1090,SC1091
                     source <(g8r host-cfg "$host_secret")
-                    ipv4=$(jq ".g8r_hosts.${host_name}.ipv4[0]" "$host_dir/host.json")
+                    ipv4=$(jq ".g8r_hosts[\"${host_name}\"].ipv4[0]" "$host_dir/host.json")
                     ipv4=${ipv4//\"/}
-                    ipv6=$(jq ".g8r_hosts.${host_name}.ipv6[0]" "$host_dir/host.json")
-                    ipv6=${ipv4//\"/}
+                    ipv6=$(jq ".g8r_hosts[\"${host_name}\"].ipv6[0]" "$host_dir/host.json")
+                    ipv6=${ipv6//\"/}
                     printf "%15s %32s %-19s %s\\n" \
                         "$ipv4" "$ipv6" "$host_name.$host_domain" "$host_secret"
                 fi

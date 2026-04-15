@@ -7,14 +7,15 @@ cd "$G8R_HOME"
 PATH="$(pwd):$(pwd)/tools:$PATH"
 export PATH G8R_HOME G8R_TREE
 
-if [ "$1" = "" ] || [ "$2" = "" ] || [ ! -d "skeletons/$2" ]; then
-    cat "../docs/help/add-host.txt" >&2
-    exit 1
-fi
 
 cd tree
 # shellcheck disable=SC1090,SC1091
 source 000_base.vars
+
+if [ "$1" = "" ] || [ "$2" = "" ] || [ ! -d "skeletons/$2/." ]; then
+    cat "$G8R_HOME/docs/help/add-host.txt" >&2
+    exit 1
+fi
 
 HOST_NAME="$1"
 HOST_TYPE="$2"
@@ -42,7 +43,7 @@ HOST_INDEX=$(cd .. && ls -1d -- */host.json 2>/dev/null | wc -l || echo 0)
 HOST_DIR="$(pwd)"
 
 cp -a "../../skeletons/${HOST_TYPE}/." .
-cat <<tac >000_base.vars
+cat <<tac >>000_base.vars
 host_name='${HOST_NAME}'
 host_type='${HOST_TYPE}'
 host_index='${HOST_INDEX}'
