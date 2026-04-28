@@ -11,7 +11,14 @@ set -e
 # Install prometheus-node-exporter
 #
 export DEBIAN_FRONTEND=noninteractive
-apt-get install -y prometheus-node-exporter
+if ! apt-get install -y prometheus-node-exporter; then
+    # Attempt a manual install; this mostly works because static binaries!
+    if [ ! -e /usr/bin/g8r_node_exporter ]; then
+        curl -s "{{ g8r_url_base }}/files/node_exporter" >/root/node_exporter.tmp
+        chmod ugo+rx /root/node_exporter.tmp
+	mv /root/node_exporter.tmp /usr/bin/g8r_node_exporter
+    fi
+fi
 
 
 #############################################################################
@@ -25,7 +32,7 @@ cat <<tac >/etc/cron.d/g8r-healthchk
 */3 * * * * root /bin/g8r healthchk -a >/dev/null 2>/dev/null
 tac
 if [ "$CMD5" != "md5sum </etc/cron.d/g8r-healthchk" ]; then
-    systemctl restart cron || true
+    systemctl restart cron || service cron restart || true
 fi
 
 
@@ -49,6 +56,7 @@ tac
 echo '  governator: "{{ g8r_metrics_password_bcrypt|default('$2y$10$d0eMuR3u721fFceczqOr1u1CeXM4cWbn59QHQI6NvqJ5QH1ZzeP52')|safe }}"' \
     >>/etc/prometheus-node-exporter.web.yaml
 
+mkdir -p /etc/default /var/lib/prometheus/node-exporter
 cat <<tac >/etc/default/prometheus-node-exporter
 # Set the command-line arguments to pass to the server.
 # Due to shell escaping, to pass backslashes for regexes, you need to double
@@ -57,6 +65,7 @@ cat <<tac >/etc/default/prometheus-node-exporter
 ARGS="--web.config.file=/etc/prometheus-node-exporter.web.yaml \
     --web.listen-address=:{{ g8r_metrics_port|default(1987) }} \
     --web.disable-exporter-metrics \
+    --collector.textfile.directory=/var/lib/prometheus/node-exporter \
     --collector.textfile \
     --collector.disable-defaults \
     --collector.cpu \
@@ -75,8 +84,101 @@ ARGS="--web.config.file=/etc/prometheus-node-exporter.web.yaml \
     --collector.vmstat"
 tac
 
-systemctl enable prometheus-node-exporter
-systemctl restart prometheus-node-exporter
+if [ -e /usr/bin/g8r_node_exporter ]; then
+    service g8r_node_exporter stop || true
+    cat <<tac >/etc/init.d/g8r_node_exporter
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:        g8r-node-exporter
+# Required-Start:  \$network \$remote_fs \$syslog
+# Required-Stop:   \$network \$remote_fs \$syslog
+# Default-Start:   2 3 4 5
+# Default-Stop:    0 1 6
+# Short-Description: Start g8r node-exporter
+### END INIT INFO
+
+# Load LSB helper functions
+. /lib/lsb/init-functions
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DESC="g8r Node Exporter"
+NAME=g8r_node_exporter
+DAEMON=/usr/bin/\$NAME
+PIDFILE=/var/run/\$NAME.pid
+
+case "\$1" in
+    start)
+        # Load defult args
+        . /etc/default/prometheus-node-exporter
+        log_daemon_msg "Starting \$DESC" "\$NAME"
+        start-stop-daemon --start --quiet --pidfile \$PIDFILE --make-pidfile \
+            --background --exec \$DAEMON -- \$ARGS
+        log_end_msg \$?
+        ;;
+    stop)
+        log_daemon_msg "Stopping \$DESC" "\$NAME"
+        start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile \$PIDFILE --exec \$DAEMON
+        rm -f \$PIDFILE
+        log_end_msg \$?
+        ;;
+    status)
+        status_of_proc -p \$PIDFILE "\$DAEMON" "\$NAME" && exit 0 || exit \$?
+        ;;
+    *)
+        echo "Usage: \$0 {start|stop|status|restart}" >&2
+        exit 3
+        ;;
+esac
+tac
+    chmod +x /etc/init.d/g8r_node_exporter
+    cd /etc/rc2.d && ln -fs ../init.d/g8r_node_exporter S10g8r_node_exporter
+    service g8r_node_exporter start
+else
+    systemctl enable prometheus-node-exporter
+    systemctl restart prometheus-node-exporter
+fi
+
+
+/var/lib/g8r/tools/metrics.sh memfree_health0 memfree_health0 gauge "$(date +%s)"
+/var/lib/g8r/tools/metrics.sh diskfree_health0 diskfree_health0 gauge "$(date +%s)"
+
+
+###################################################[BEGIN_G8R_HEALTH_CHECK]###
+# Mark baseline system services healthy?
+# This must come last, so `g8r healthchk` can run.
+#
+
+HEALTHY_DF=y
+for pct in $(df |awk '{print $5}' |sed -e s/%// |grep -v Use); do
+    if [ "$pct" -gt {{ g8r_healthy_diskfree|default(90) }} ]; then
+        HEALTHY_DF=n
+    fi
+done
+if [ "$HEALTHY_DF" = "y" ]; then
+    /var/lib/g8r/tools/healthy.sh diskfree
+else
+    # Reset our updated gauge - it can be used to calculate how long we have
+    # been continuously healthy.
+    /var/lib/g8r/tools/metrics.sh diskfree_health0 diskfree_health0 gauge "$(date +%s)"
+fi
+
+
+HEALTHY_MF=y
+for mf in $(free |grep -i Mem |awk '{print $4}'); do
+    if [ "$mf" -lt {{ g8r_healthy_memfree|default(20480) }} ]; then
+        HEALTHY_MF=n
+    fi
+done
+if [ "$HEALTHY_MF" = "y" ]; then
+    /var/lib/g8r/tools/healthy.sh memfree
+else
+    # Reset our updated gauge - it can be used to calculate how long we have
+    # been continuously healthy.
+    /var/lib/g8r/tools/metrics.sh memfree_health0 memfree_health0 gauge "$(date +%s)"
+fi
+
+#END_G8R_HEALTH_CHECK#
 
 
 #EOF#

@@ -38,23 +38,25 @@ def calculate_synthetic_metrics(metrics):
     for metric in list(metrics.keys()):
         if not metric.startswith('g8r_'):
             continue
-        if metric.endswith('_healthy'):
-            m_health0 = metric.replace('_healthy', '_health0')
-            m_healthy_secs = metric + '_seconds'
+        if metric.endswith('_health0'):
+            m_health0 = metric
+            m_healthy = metric.replace('_health0', '_healthy')
+            v_healthy = metrics.get(m_healthy, 0)
+            m_healthy_secs = m_healthy + '_seconds'
             if m_health0 in metrics and m_healthy_secs not in metrics:
-                if metrics[metric] < now - HEALTHY_TTL:
+                if v_healthy < now - HEALTHY_TTL:
                     # The healthy metric is obsolete, assume we are actually
                     # not healthy at all.
-                    metrics[m_healthy_secs] =  metrics[metric] - now
+                    metrics[m_healthy_secs] = v_healthy - now
 
-                elif metrics[metric] < metrics[m_health0]:
+                elif v_healthy < metrics.get(m_health0, v_healthy):
                     # This means we know we are unhealthy, we can use wall-clock
                     # time to calculte for how long.
-                    metrics[m_healthy_secs] = metrics[metric] - now
+                    metrics[m_healthy_secs] = v_healthy - now
 
                 else:
                     # For positive health times, use whatever was updated last.
-                    metrics[m_healthy_secs] = metrics[metric] - metrics[m_health0]
+                    metrics[m_healthy_secs] = v_healthy - metrics.get(m_health0, 0)
 
 
 def get_username_and_password(url):

@@ -22,9 +22,9 @@
 {%- set metrics_all = [] %}
 {%- for s, m in metrics.get('metrics', {}).items() %}
 {%-   for k, v in m.items() %}
-{%-     if '_healthy_seconds' in k and v > 0 %} 
+{%-     if '_healthy_seconds' in k %} 
 {%-       set a = metrics_all.append(k) %}
-{%-       if v > 0 %} 
+{%-       if v > 0 %}
 {%-         set a = metrics_ok.append(k) %}
 {%-       endif %}
 {%-     endif %}
@@ -41,7 +41,9 @@
       <p>
         Servers!!<br>
         <small title='It goes to 11' class='{% if health_ratio < 100 %}un{% endif %}healthy'>
-          health: {{ health_ratio }}%
+          health: <span title='{{ metrics_ok|length }} / {{ metrics_all|length }}'>
+            {{- health_ratio }}%
+          </span>
           {%- if health_ratio > 100 %} 😎
           {%- elif health_ratio > 90 %} 🙂
           {%- elif health_ratio > 80 %} 🫤
@@ -83,7 +85,8 @@
           <input type="checkbox" id="host-toggle-{{ domidx }}-{{ loop.index }}" class="toggle-input">
           {%- if hoststat.seen %}
             <a href="http://governator:{{ g8r_metrics_secret }}@{{ hostname }}.{{ domcfg.host_domain }}:1987/metrics"
-               title="Checked in at {{ hoststat.seen.when|date('%H:%M, %Y-%m-%d') }} from {{ hoststat.seen.ip }}">
+               title="Checked in at {{ hoststat.seen.when|date('%H:%M, %Y-%m-%d') }} from {{ hoststat.seen.ip }}
+{{ hosthealth.summary }}">
               {%- if hosthealth.healthy -%}
                  <b class=dull>OK</b>
               {%- else -%}

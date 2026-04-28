@@ -21,6 +21,9 @@ export RAW_METRICS="${RAW_METRICS:-n}"
 FILTERS="${FILTERS:-g8r}"
 [ "$FILTERS" = '*' ] && FILTERS=""
 
+mkdir -p tree/status
+[ -e tree/status/summary.json ] || echo '{}' >tree/status/summary.json
+
 # shellcheck disable=SC1090,SC1091
 source tree/000_base.vars
 if [ "$1" = "-a" ]; then
@@ -28,7 +31,7 @@ if [ "$1" = "-a" ]; then
     HOSTS="$*"
     for hd in $(find tree -type f -name 102_metrics.sh | cut -d/ -f1-3); do
         SECRET="$(echo "$hd" | cut -d/ -f3)"
-        SEEN="$(jq .status."$SECRET".seen.when tree/status/summary.json)"
+        SEEN="$(jq .status[\"$SECRET\"].seen.when tree/status/summary.json)"
         if [ "$SEEN" != null ]; then
             # shellcheck disable=SC1090,SC1091,SC2154
             H="$(
@@ -42,6 +45,7 @@ if [ "$1" = "-a" ]; then
             fi
         fi
     done
+    [ "$HOSTS" = "" ] && exit 0
 fi
 
 if [ "$HOSTS" = "" ]; then
@@ -74,7 +78,9 @@ fi
             if [ "$LIVE_METRICS" != "y" ]; then
                 cat "$RAW_CACHE"
             else
+                source <(g8r host-cfg "$h")
                 curl --max-time 10 -s \
+		    --resolve "$h:1987:$host_ipv4" \
                     "http://governator:${g8r_metrics_secret:-governator}@$h:1987/metrics" \
                     | tee "$RAW_CACHE".new
                 # shellcheck disable=SC2015
@@ -91,5 +97,5 @@ fi
                 $FILTERS
         fi
     done
-) | sed -e '$,$s/,$//'
-[ "$RAW_METRICS" != "n" ] || echo '}}'
+)
+[ "$RAW_METRICS" != "n" ] || echo '"_EOF_": {}}}'

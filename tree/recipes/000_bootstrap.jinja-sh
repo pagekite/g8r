@@ -16,7 +16,7 @@ set -e
 #
 hostname $HOST_FQDN
 echo "$HOST_FQDN" >/etc/hostname
-echo '{{ pk_service_timezone }}' >/etc/timezone
+echo '{{ pk_service_timezone|default('Etc/UTC') }}' >/etc/timezone
 
 
 #############################################################################

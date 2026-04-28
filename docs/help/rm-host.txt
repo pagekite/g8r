@@ -2,7 +2,6 @@ Usage: g8r rm-host <host>
 
 Remove the host identified by <host> from your Governator.
 
-The host is selected by grepping the output of `g8r hosts` for the given
-host identifier. If more than one matches, the tool aborts. If only one
-matches, it asks permission and then runs `rm`.
+If more than one matches, the tool aborts. If only one matches, it asks
+permission and then runs `rm`.
 

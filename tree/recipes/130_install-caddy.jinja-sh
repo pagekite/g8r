@@ -27,23 +27,29 @@ mkdir -p {{ fqdn }}
 touch {{ fqdn }}/index.html
 echo 'OK' >{{ fqdn }}/.healthy.txt
 
-{% for domain, svc in (g8r_service_domains|default({})).items() %}{%- if svc.web_static_git %}
+{% for domain, svc in (g8r_service_domains|default({})).items() %}
  {%- if host_name in svc.hosts|default([host_name]) %}
-  {%- if svc.web_reset %}
+  {%- if svc.web_static_git %}
+   {%- if svc.web_reset %}
 rm -rf "{{ domain }}"
-  {%- endif %}
+   {%- endif %}
 if [ -d "{{ domain }}" ]; then
     (cd "{{ domain }}" && git pull)
 else
     git clone "{{ svc.web_static_git }}" "{{ domain }}"
 fi
 echo 'OK' >{{ domain }}/.healthy.txt
-{% endif %}{% endif %}{% endfor %}
+  {%- endif %}
+  {%- set static_dir = svc.web_static_dir|default('/var/lib/www-static/' + domain) %}
+mkdir -p "{{ static_dir }}/.well-known"
+chmod go+rwxt "{{ static_dir }}/.well-known"
+ {%- endif %}
+{%- endfor %}
 
 # Dotfiles (or directories) should not be exposed to the web,
 # ... except for .well-known
 chmod go-rwx /var/lib/www-static/*/.??* || true
-chmod go+rx /var/lib/www-static/*/.well-known || true
+chmod go+rx /var/lib/www-static/*/.{well-known,healthy.txt} || true
 
 
 #############################################################################

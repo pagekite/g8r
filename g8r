@@ -56,8 +56,8 @@ case "$COMMAND" in
         ;;
 
     host-cfg)
-        [ "$1" = '--json' ] && T="json" && shift || T="sh"
-        target=$(g8r host-secret "$1")
+        [ "${1:-}" = '--json' ] && T="json" && shift || T="sh"
+        target=$(g8r host-secret "${1:-}")
         [ "$target" = "" ] && echo "Usage: g8r host-cfg [--json] <host>" >&2 && exit 1
         umask 0077
         cd "$G8R_HOME"
@@ -93,6 +93,28 @@ case "$COMMAND" in
         done
         ;;
 
+    host-info)
+	target="$(g8r host-secret "${1:-}")"
+        [ "$target" = "" ] && echo "Usage: g8r host-info <host>" >&2 && exit 1
+        # shellcheck disable=SC1090,SC1091
+	source <(g8r host-cfg "$target")
+	host_dir="$G8R_HOME/tree/hosts-$host_domain/$target"
+        ipv4=$(jq ".g8r_hosts[\"${host_name}\"].ipv4[0]" "$host_dir/host.json")
+        ipv4=${ipv4//\"/}
+        ipv6=$(jq ".g8r_hosts[\"${host_name}\"].ipv6[0]" "$host_dir/host.json")
+        ipv6=${ipv6//\"/}
+	# shellcheck disable=SC2154
+	cat <<tac
+Host FQDN: $host_name.$host_domain
+
+IPv4: ${ipv4:-none}
+IPv6: ${ipv6:-none}
+Bootstrap URL:
+    $g8r_url_base/hosts/$target/000_bootstrap.sh
+
+tac
+        ;;
+
     etc-hosts)
         echo "About to update /etc/hosts - sudo may prompt for a password." >&2
         for etc_hosts in ./tree/hosts-*/101_etc-hosts.sh; do
@@ -118,7 +140,10 @@ case "$COMMAND" in
         for H in $*; do
             H=$(g8r host-secret "$H")
             [ "$H" != "" ] && [ ! -e "exposed/hosts/$H/host.json" ] && echo -e "Host not found or ambiguous: $1" >&2
-            [ "$H" = "" ] || [ -e "exposed/hosts/$H/host.json" ] && cat "$G8R_HOME"/docs/help/rm-host.txt >&2 && exit 1
+            if [ "$H" = "" ] || [ ! -e "exposed/hosts/$H/host.json" ]; then
+                cat "$G8R_HOME"/docs/help/rm-host.txt >&2
+                exit 1
+            fi
             # shellcheck disable=SC1090,SC1091
             source <(g8r host-cfg "$H")
             HOST_DIR=$(cd tree/hosts-*/"$H" && pwd)
@@ -146,7 +171,9 @@ case "$COMMAND" in
         shift
         # shellcheck disable=SC1090,SC1091
         source <(g8r host-cfg "$H")
-        target=${host_ipv4:-${host_ipv6:-"$host_name.$host_domain"}}
+	target=$(jq ".g8r_hosts[\"$host_name\"].ipv4[0]" "$G8R_TREE"/hosts-*/"$H/host.json")
+	[ "$target" = "" ] && target="$host_name.$host_domain"
+        target=${target//\"/}
         echo "Attempting: ssh -p ${g8r_sshd_port:-22} root@$target ..." >&2
         exec ssh -p "${g8r_sshd_port:-22}" "root@$target" "$@"
         ;;

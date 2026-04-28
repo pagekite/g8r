@@ -53,6 +53,8 @@ host_backups='${BACKUPS:-tgz:auto}'
 host_g8r_secret='${HOST_SECRET}'
 tac
 
+[ -e "009_automation.json" ] || echo '{}' >009_automation.json
+
 json_edit.py \
     host.json \
     "g8r_hosts/${HOST_NAME}/secret" = "${HOST_SECRET}" \

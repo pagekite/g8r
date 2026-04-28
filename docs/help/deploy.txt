@@ -1,1 +1,6 @@
-FIXME
+Usage: g8r deploy <host>
+
+Deploy the host identified by <host> from your Governator.
+
+This spins up a VPS for the host, using the configured provider.
+

@@ -294,6 +294,10 @@ class JinjaToolExtension(Extension):
                  if v < 0:
                      summary['healthy'] = False      
                      summary['failing'].append(service)
+        if len(summary['failing']):
+            summary['summary'] = 'Unhealthy, failing: ' + ', '.join(summary['failing'])
+        else:
+            summary['summary'] = 'Healthy! OK: ' + ', '.join(summary['services'])
         return summary
    
     def _schedule(self, schedule, days=35, month=True, week=False):

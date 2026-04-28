@@ -19,7 +19,7 @@ HOUR="${HOUR:-$(date +'h%H')}"        # Hour only
 # If we've been up and running for less than 1.5 hours, assume we recently
 # got rebooted and request an undrain.
 #
-UPTIME=$(( "$(date +%s)" - "$(date +%s --date "$(uptime -s)")" ))
+UPTIME=$(cut -f1 -d\  </proc/uptime |cut -f1 -d.)
 if [ "$UPTIME" -lt 5400 ]; then
     curl -s "${G8R_PING_URL}?undrain={{ host_g8r_secret }}" || true
 fi
@@ -63,7 +63,8 @@ if [ "$HOUR" = "h05" ]; then
         fi
     fi
 fi
-{%- else %}# No backups configured. See: g8r help backups
+{% else %}
+# No backups configured. See: g8r help backups
 {%- endif %}
 
 
@@ -91,7 +92,8 @@ for t in $NOW $WNOW $WDAY; do
 {%-   endfor %}
   esac
 done
-{%- else %}# No scheduledu updates configured. See: g8r help schedule
+{%- else %}
+# No scheduledu updates configured. See: g8r help schedule
 {%- endif %}
 
 
@@ -101,6 +103,8 @@ exit 0  # ##[ End of normal script, only fragments follow ]###################
 ########################################################[BEGIN_G8R_UPGRADE]###
 # This is the upgrade fragment
 #
+g8r run --force 900_update.sh
+
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"

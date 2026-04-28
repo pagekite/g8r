@@ -11,7 +11,7 @@ MP_RFC822 ?= $(abspath $(shell find -L . -name template.md-jinja |head -1))
 
 MAKE = make JINJATOOL_ROOT=$(JINJATOOL_ROOT) JINJATOOL_VARS=$(JINJATOOL_VARS) JINJATOOL=$(JINJATOOL) MP_RFC822=$(MP_RFC822) \
             -f $(word 1,$(MAKEFILE_LIST)) --no-print-directory
-EXCLUDE = grep -v -e /bin/ -e /canaries/ -e /hosts/ -e /skeletons/ -e /recipes/
+EXCLUDE = grep -v -e /bin/ -e /canaries/ -e /hosts/ -e /skeletons/ -e /recipes
 MAKE_ONLY ?= cat
 TARGETS = find -L . -name \*.jinja* -o -name \*.md \
             |$(MAKE_ONLY) |$(EXCLUDE) \

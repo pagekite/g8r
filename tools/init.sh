@@ -222,7 +222,7 @@ fi
 
 # Create g8r-tools bundle in exposed/files
 echo >&2
-tar cfz exposed/files/g8r-tools.tar.gz g8r tools/*.py tools/{metrics,healthy,fragment-run}.sh
+tar cfhz exposed/files/g8r-tools.tar.gz g8r tools/*.py tools/{metrics,healthy,fragment-run}.sh
 echo "** OK: Created: $(ls -1hs exposed/files/g8r-tools.tar.gz)" >&2
 
 # Create the symbolic link for exposing things to the web
