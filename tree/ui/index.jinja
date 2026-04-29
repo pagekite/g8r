@@ -123,7 +123,7 @@
           <p class='none'><i>none</i></p>
         {% endif %}</td>
         <td class='host-backups'{% if hostbkup %}
-            title="{{ hostbkup.bytes }} bytes in {{ hostbkup.count }} backups, most recent at {{ hostbkup.ts|date('%H:%M, %Y-%m-%d') }}">
+            title="{{ hostbkup.bytes|friendly_bytes }} in {{ hostbkup.count }} backups, most recent at {{ hostbkup.ts|date('%H:%M, %Y-%m-%d') }}">
           <p>{{ hostbkup.ts|date("%m-%d") }}</p>
           <p class=details>{{ hostbkup.bytes|friendly_bytes }}</p>
         {%- else %}>

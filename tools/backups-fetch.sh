@@ -38,7 +38,7 @@ for TARGET_HOST in $*; do
     cd "$TARGET_DIR"
 
     rsync -a --rsh="ssh -p ${g8r_sshd_port:-22} -o ConnectTimeout=5" \
-        root@"$TARGET_HOSTNAME":/var/lib/g8r/backups/. .
+        root@"$host_ipv4":/var/lib/g8r/backups/. .
 
     TOTAL_FILES=0
     TOTAL_BYTES=0
@@ -50,11 +50,11 @@ for TARGET_HOST in $*; do
         TOTAL_FILES=$((TOTAL_FILES + 1))
         [ "$MTIME" -gt "$TOTAL_MTIME" ] && TOTAL_MTIME=$MTIME
         json_edit.py manifest-new.json \
-            "g8r_backups/$TARGET_HOST/TOTALS/ts" = "$TOTAL_MTIME" \
-            "g8r_backups/$TARGET_HOST/TOTALS/bytes" = "$TOTAL_BYTES" \
-            "g8r_backups/$TARGET_HOST/TOTALS/count" = "$TOTAL_FILES" \
-            "g8r_backups/$TARGET_HOST/$backup/bytes" = "$BYTES" \
-            "g8r_backups/$TARGET_HOST/$backup/ts" = "$MTIME" \
+            "g8r_backups/$host_g8r_secret/TOTALS/ts" = "$TOTAL_MTIME" \
+            "g8r_backups/$host_g8r_secret/TOTALS/bytes" = "$TOTAL_BYTES" \
+            "g8r_backups/$host_g8r_secret/TOTALS/count" = "$TOTAL_FILES" \
+            "g8r_backups/$host_g8r_secret/$backup/bytes" = "$BYTES" \
+            "g8r_backups/$host_g8r_secret/$backup/ts" = "$MTIME" \
             >/dev/null
     done
 

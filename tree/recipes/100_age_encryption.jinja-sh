@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+export G8R_PING_URL="{{ g8r_url_base }}/events/"
+export G8R_ID_FILE="/var/lib/g8r/age.id"
+export LC_ALL=C
+export LANG=C
+set -x
+set -e
+
+#############################################################################
+# Install age, so we can decrypt things
+#
+export DEBIAN_FRONTEND=noninteractive
+apt-get install -y age
+
+
+#############################################################################
+# Create our encryption keys, communicate back to Governator
+#
+if [ ! -e "$G8R_ID_FILE" ]; then
+    age-keygen -o "$G8R_ID_FILE"
+fi
+
+RECIPIENT=$(age-keygen -y "$G8R_ID_FILE")
+curl -s "${G8R_PING_URL}?host={{host_g8r_secret}}&age_id=$RECIPIENT" || true
+
+exit 0  # ##[ End of normal script, only fragments follow ]###################
+
+#EOF#

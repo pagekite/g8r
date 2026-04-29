@@ -50,10 +50,10 @@ done
 
 
 #############################################################################
+{%- set cron_hash = host_g8r_secret|hash|truncate(4, end='') %}
+{%- set cron_hour = (cron_hash|int(base=16)) % 49 + 10 %}
 # Create (or remove) g8r hourly cron job (0x{{ cron_hash }} => hh:{{ cron_hour }})
 #
-{%- set cron_hash = host_g8r_secret|hash|truncate(4, end='') %}
-{%- set cron_hour = (cron_hash|int(16)) % 49 + 10 %}
 if [ -e /var/lib/g8r/scripts/900_hourly-cron.sh ]; then
     CMD5=""
     [ -e /etc/cron.d/g8r-hourly ] && CMD5="$(md5sum </etc/cron.d/g8r-hourly)"

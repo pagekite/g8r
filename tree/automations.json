@@ -16,8 +16,8 @@
     ["/events/\\?(?P<re_event>backup_ready|drain|undrain)=(?P<re_host>[A-Za-z0-9_-]+)",
                                                                "HOST_EVENT"],
     ["/events/\\?backup_ready=(?P<re_host>[A-Za-z0-9_-]+)",    "BACKUP_READY"],
-    ["/events/\\?git_update=\\S+",                             "GIT_UPDATE"],
-    ["/events/\\?site_update=(?P<re_domain>[A-Za-z0-9\\.-]+)", "SITE_UPDATE"]
+    ["/events/\\?site_update=(?P<re_domain>[A-Za-z0-9\\.-]+)", "SITE_UPDATE"],
+    ["/(events|ping)/\\?git_update=\\S+",                      "GIT_UPDATE"]
   ],
 
   "#11": "These are regeps against: Weekday Month YYYY-MM-DD HHhMMmSSs",
