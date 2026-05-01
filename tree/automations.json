@@ -55,7 +55,7 @@
     },
     {
       "pre_conditions": {},
-      "read": ["exposed/files/backups/*/manifest.json"],
+      "read": ["private/backups/*/manifest.json"],
       "map": {
         "g8r_backups": "g8r_backups"
       },

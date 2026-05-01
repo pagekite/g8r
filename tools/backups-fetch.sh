@@ -33,7 +33,7 @@ for TARGET_HOST in $*; do
     [ "${host_g8r_secret}" = "" ] && exit 2
 
     TARGET_HOSTNAME="${host_name}.${host_domain}"
-    TARGET_DIR="$G8R_HOME"/exposed/files/backups/"${host_g8r_secret}"
+    TARGET_DIR="$G8R_HOME"/private/backups/"${host_g8r_secret}"
     mkdir -p "$TARGET_DIR"
     cd "$TARGET_DIR"
 
