@@ -1,0 +1,49 @@
+Usage: g8r ls
+       g8r run [--force] <script> [<arg> ...]
+       g8r healthchk (-a | <script>)
+
+These three commands only work on a Governator-managed host (where
+the on-host bundle has been installed under $G8R_HOME/scripts/).
+Running them on the Governator Server itself just prints an error.
+
+
+## g8r ls
+
+List the installed scripts in $G8R_HOME/scripts/, one per line.
+
+
+## g8r run [--force] <script> [<arg> ...]
+
+Run an installed script with bookkeeping:
+
+  - Archives the script bytes into logs/<timestamp>-<script> first,
+    so you can always tell exactly what ran.
+  - Tees combined output to logs/<timestamp>-<script>.log.
+  - On success, touches logs/RAN.<md5-of-script>. The next time `g8r
+    run` is asked to run a script with the same md5, it skips it and
+    prints "Skipped, already ran: ...".
+
+Use --force to bypass the md5 check and re-run unconditionally. This
+is what `g8r update <host>` does from the Governator side.
+
+Extra arguments after <script> are passed straight through to the
+script.
+
+Examples:
+
+    g8r run 130_install-caddy.sh
+    g8r run --force 900_update.sh
+
+
+## g8r healthchk (-a | <script>)
+
+Run only the HEALTH_CHECK fragment of one or all installed scripts.
+Health-check fragments are short, side-effect-free blocks declared
+inside a recipe; `fragment-run.sh` extracts and executes them in
+isolation.
+
+  - With -a, every script under $G8R_HOME/scripts/ is checked.
+  - With a <script> name, only that script is checked.
+
+The fragments themselves are responsible for updating the health
+checking metrics.

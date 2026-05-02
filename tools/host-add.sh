@@ -7,7 +7,6 @@ cd "$G8R_HOME"
 PATH="$(pwd):$(pwd)/tools:$PATH"
 export PATH G8R_HOME G8R_TREE
 
-
 cd tree
 # shellcheck disable=SC1090,SC1091
 source 000_base.vars

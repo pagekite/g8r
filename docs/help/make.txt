@@ -1,0 +1,19 @@
+Usage: g8r make [<make-target> ...]
+
+This is the command you run after editing anything under `tree/`.
+
+It takes care of updating/migrating variables and rebuilding the
+per-domain and per-host configuration scripts.
+
+The `make` step is run twice if the first invocation fails, because
+some targets depend on variables produced by other targets in the
+same run. This is normal and not an error.
+
+Optional <make-target> arguments are passed straight through to make.
+With no arguments, the default target rebuilds everything that has
+changed.
+
+Examples:
+
+    g8r make
+    g8r make clean all

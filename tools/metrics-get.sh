@@ -31,6 +31,7 @@ if [ "$1" = "-a" ]; then
     HOSTS="$*"
     for hd in $(find tree -type f -name 102_metrics.sh | cut -d/ -f1-3); do
         SECRET="$(echo "$hd" | cut -d/ -f3)"
+        # shellcheck disable=SC2086
         SEEN="$(jq .status[\"$SECRET\"].seen.when tree/status/summary.json)"
         if [ "$SEEN" != null ]; then
             # shellcheck disable=SC1090,SC1091,SC2154
@@ -78,9 +79,11 @@ fi
             if [ "$LIVE_METRICS" != "y" ]; then
                 cat "$RAW_CACHE"
             else
+                # shellcheck disable=SC1090
                 source <(g8r host-cfg "$h")
+                # shellcheck disable=SC2154
                 curl --max-time 10 -s \
-		    --resolve "$h:1987:$host_ipv4" \
+                    --resolve "$h:1987:$host_ipv4" \
                     "http://governator:${g8r_metrics_secret:-governator}@$h:1987/metrics" \
                     | tee "$RAW_CACHE".new
                 # shellcheck disable=SC2015

@@ -12,6 +12,7 @@ if [ "${1:-}" = "" ]; then
 fi
 if [ "$1" = "-a" ] || [ "$1" = "-d" ] || [ "$1" = "-l" ]; then
     [ "$1" != "-a" ] && ARGS="$*" || ARGS=""
+    # shellcheck disable=SC2086  ## Deliberate $ARGS whitespace expansion
     for HOST in $(g8r hosts -s $ARGS); do
         backups-fetch.sh "$HOST" || true
     done
@@ -33,7 +34,6 @@ for TARGET_HOST in $*; do
     source <(g8r host-cfg "$TARGET_HOST")
     [ "${host_g8r_secret}" = "" ] && exit 2
 
-    TARGET_HOSTNAME="${host_name}.${host_domain}"
     TARGET_DIR="$G8R_HOME"/private/backups/"${host_g8r_secret}"
     mkdir -p "$TARGET_DIR"
     cd "$TARGET_DIR"

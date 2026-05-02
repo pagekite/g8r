@@ -42,7 +42,7 @@ COMMON_WEBLOG_RE = re.compile(
 
 class AutomationRunner:
     def __init__(self, path_to_configs=None):
-        if not path_to_configs:
+        if path_to_configs in (None, [], ['']):
             path_to_configs = DEFAULT_CONFIG_FILES
 
         g8r_home = os.getenv('G8R_HOME') or DEFAULT_G8R_HOME

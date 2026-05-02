@@ -1,0 +1,42 @@
+Usage: g8r automate [/path/to/config1.json /path/to/c2.json ...]
+
+Runs the automation loop defined in the named configuration files, or
+in `tree/automations.json` (and `tree/automations-local.json`) if no
+paths are given.
+
+This is a long-running process, intended to be supervised by systemd,
+a process manager, or run as a cron job.
+
+The automation loop does three kinds of work:
+
+   * Implements a cron-like schedule (`scheduled_events`) for "automations"
+     run (roughly) at a given time.
+
+   * Tails web server access logs listed under `log_files` and searches for
+     specific patterns. Matches will schedule automations (e.g. SITE_UPDATE or
+     BACKUP_READY) for execution. This is both used to take action based on
+     events which take place on managed hosts, and to implement webhooks for
+     CI/CD workflows.
+
+   * Migrates variables from JSON sources to other destination files.
+     These migrations are used to aggregate information or implement
+     CI/CD workflows: build scripts will generate manifests of current
+     version numbers, which migrate to the configurations of live (canary)
+     hosts, which upon a rebuild will ultimately trigger an update. 
+
+Automations themselves are listed in the JSON configuration under
+`automations`: a name and a shell command (with `$var` placeholders filled in
+from the matching event). They run strictly sequentially, never in parallel,
+eliminating concerns about race conditions or overlapping processes. An
+automation may chain another by printing `AUTOMATION: NAME` to stdout, but this
+will only work if the triggered automation is downstream (later in the list)
+from the one triggering it.
+
+The `max_run_hours` setting will cap how long the loop runs before
+exiting; 0 means run forever. `sleep_seconds` controls the polling
+interval.
+
+Edit `tree/automations[-local].json` to add your own triggers. The shipped
+file implements the default patterns documented on the Governator website, you
+can either keep them and add your customizations in `automations-local.json`,
+or change the main file as you prefer.

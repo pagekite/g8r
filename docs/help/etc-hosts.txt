@@ -1,0 +1,9 @@
+Usage: g8r etc-hosts
+
+Update `/etc/hosts` on the Governator Server from the current host
+inventory. Useful when public DNS for your managed hosts isn't in
+place yet (or when you want the Governator to reach hosts by name
+without depending on DNS).
+
+Run `g8r make` first if you have just added, removed, or re-IP'd a
+host; otherwise the rendered scripts will still hold the old data.

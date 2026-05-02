@@ -1,0 +1,16 @@
+Usage: g8r init
+
+Interactive first-time setup of the Governator Server.
+
+Checks dependencies (make, htpasswd, python3 + jinja2/markdown/yaml,
+rsync) and then asks some questions about how you intend to use the
+Governator.
+
+Answers are written to tree/000_base.vars; rerun init at any time to
+change them. The first run also:
+
+  - Creates tree/hosts-<domain>/ via `g8r add-domain`.
+  - Builds exposed/files/g8r-tools.tar.gz (the on-host bundle).
+  - Verifies HTTPS works by curl-ing a check file.
+
+Finally the tool gives some helpful advice on next steps using g8r.
