@@ -230,16 +230,20 @@ tac
 
     ssh | scp-to | scp-from)
         G8R_SSH_IP=${G8R_SSH_IP:-ipv4}
+        # shellcheck disable=SC2015
         [ "${1:-}" = "-6" ] && G8R_SSH_IP=ipv6 && shift || true
+
         H=$(g8r host-secret "${1:-}")
         [ "$H" = "" ] && cat "$G8R_HOME/docs/help/ssh.txt" >&2 && exit 1
         shift
+
         # shellcheck disable=SC1090,SC1091
         source <(g8r host-cfg "$H")
-        target=$(jq ".g8r_hosts[\"$host_name\"].$G8R_SSH_IP[0]" "$G8R_TREE"/hosts-*/"$H/host.json")
+        target=$(jq ".g8r_hosts[\"$host_name\"].${G8R_SSH_IP}[0]" "$G8R_TREE"/hosts-*/"$H/host.json")
+        # shellcheck disable=SC2015
         [ "$target" = "null" ] && target="$host_name.$host_domain" && G8R_SSH_IP=none
         target=${target//\"/}
-	G8R_SSH_PORT=${G8R_SSH_PORT:-${g8r_sshd_port:-22}}
+        G8R_SSH_PORT=${G8R_SSH_PORT:-${g8r_sshd_port:-22}}
         case "$COMMAND" in
             ssh)
                 echo "Attempting: ssh -p $G8R_SSH_PORT root@$target ..." >&2
@@ -248,14 +252,14 @@ tac
             scp-to)
                 tpath="$1"
                 shift
-	        [ "$G8R_SSH_IP" = "ipv6" ] && target="[$target]"
+                [ "$G8R_SSH_IP" = "ipv6" ] && target="[$target]"
                 echo "Attempting: scp -P $G8R_SSH_PORT ... root@$target:$tpath" >&2
                 exec scp -P "$G8R_SSH_PORT" "$@" "root@$target:$tpath"
                 ;;
             scp-from)
                 tpath="$1"
                 shift
-	        [ "$G8R_SSH_IP" = "ipv6" ] && target="[$target]"
+                [ "$G8R_SSH_IP" = "ipv6" ] && target="[$target]"
                 echo "Attempting: scp -P $G8R_SSH_PORT root@$target:$tpath ..." >&2
                 exec scp -P "$G8R_SSH_PORT" "root@$target:$tpath" "$@"
                 ;;
@@ -264,6 +268,7 @@ tac
 
     update)
         G8R_SSH_IP=${G8R_SSH_IP:-ipv4}
+        # shellcheck disable=SC2015
         [ "${1:-}" = "-6" ] && G8R_SSH_IP=ipv6 && shift || true
         export G8R_SSH_IP
 
@@ -293,6 +298,7 @@ tac
 
     push)
         G8R_SSH_IP=${G8R_SSH_IP:-ipv4}
+        # shellcheck disable=SC2015
         [ "${1:-}" = "-6" ] && G8R_SSH_IP=ipv6 && shift || true
         export G8R_SSH_IP
 
@@ -319,15 +325,19 @@ tac
             host_dir=$(g8r host-dir "$host")
             if [ -e "$G8R_TREE/$host_dir/$script" ]; then
                 tdir=/var/lib/g8r/scripts/
-                if ! g8r scp-to "$host" "$tdir" "$G8R_TREE/$host_dir/$script"; then
-                    g8r ssh "$host" mkdir -p "$tdir"
-                    g8r scp-to "$host" "$tdir" "$G8R_TREE/$host_dir/$script"
-                fi
-                if [ "$G8R_PARALLEL" = "y" ]; then
-                    g8r ssh "$host" "g8r run \"$script\" </dev/null >/dev/null 2>&1 &"
-                else
-                    g8r ssh "$host" g8r run "$script"
-                fi
+                (
+                    if ! g8r scp-to "$host" "$tdir" "$G8R_TREE/$host_dir/$script"; then
+                        g8r ssh "$host" mkdir -p "$tdir"
+                        g8r scp-to "$host" "$tdir" "$G8R_TREE/$host_dir/$script"
+                    fi
+                    if [ "$G8R_PARALLEL" = "y" ]; then
+                        g8r ssh "$host" "g8r run \"$script\" </dev/null >/dev/null 2>&1 &"
+                    else
+                        g8r ssh "$host" g8r run "$script"
+                    fi
+                ) &
+                # shellcheck disable=SC2015
+                [ "$G8R_PARALLEL" = "y" ] && sleep 1 || wait $!
             else
                 echo "Not found in $host_dir: $script" >&2
                 ECODE=1
@@ -428,8 +438,8 @@ tac
     metrics    Fetch the metrics/monitoring data from a host
     host-cfg   Display variables configuration for a given host
     ssh        SSH (as root) into a specific host
-   *push       Update a chosen script run it (over SSH) on one or more hosts
-   *update     Run \`g8r run --force 900_update.sh\` on one or more hosts
+    push       Update a chosen script run it (over SSH) on one or more hosts
+    update     Run \`g8r run --force 900_update.sh\` on one or more hosts
    *undeploy   Undeploy a host (delete the VPS)
 tac
             [ -e "$G8R_HOME/scripts/" ] && cat <<tac
