@@ -14,6 +14,8 @@ Each <host> may be a short hostname (`www`), a fully-qualified name
 (`www.example.org`), or the host's secret. See `g8r help ssh` for 
 more details on host names.
 
+Use `-6` to connect to a host's IPv6 address instead of IPv4.
+
 See `g8r help hosts` for details on automatic host selection (the `-a`,
 `-d` and `-l` arguments). Note that `-d` can be followed by `-l`.
 
@@ -27,4 +29,4 @@ Examples:
     g8r push -p 000_bootstrap.sh -d example.org -l www
 
     # Push the current update script to all hosts, one after another
-    g8r push 000_bootstrap.sh -a
+    g8r push -6 000_bootstrap.sh -a

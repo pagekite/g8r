@@ -1,7 +1,7 @@
-Usage: g8r update [-p] -a
-       g8r update [-p] -d <domain>
-       g8r update [-p] -l <pattern>
-       g8r update [-p] <host1 host2 ... hostN>
+Usage: g8r update [-6] [-p] -a
+       g8r update [-6] [-p] -d <domain>
+       g8r update [-6] [-p] -l <pattern>
+       g8r update [-6] [-p] <host1 host2 ... hostN>
 
 SSH as root into one or more managed hosts and run the g8r update
 script (`900_update.sh`) on each.
@@ -15,6 +15,8 @@ Each <host> may be a short hostname (`www`), a fully-qualified name
 (`www.example.org`), or the host's secret. See `g8r help ssh` for 
 more details on host names.
 
+Use `-6` to connect to a host's IPv6 address instead of IPv4.
+
 See `g8r help hosts` for details on automatic host selection (the `-a`,
 `-d` and `-l` arguments). Note that `-d` can be followed by `-l`.
 
@@ -22,5 +24,5 @@ Examples:
 
     g8r update www
     g8r update -p www1 www2 www3
-    g8r update -p -d example.org
+    g8r update -6 -p -d example.org
     g8r update -a

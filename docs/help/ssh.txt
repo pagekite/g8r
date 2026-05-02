@@ -1,17 +1,17 @@
-Usage: g8r ssh <host> [<command> ...]
-       g8r scp-to <host> <dest-path> <source-files ...>
-       g8r scp-from <host> <source-path> [<local dir>]
+Usage: g8r ssh [-6] <host> [<command> ...]
+       g8r scp-to [-6] <host> <dest-path> <source-files ...>
+       g8r scp-from [-6] <host> <source-path> [<local dir>]
 
 SSH or SCP as root into a managed host, using the SSH port configured for
 that host (g8r_sshd_port, default 22).
 
 <host> may be a short hostname (`www`), a fully-qualified name
-(`www.example.org`), or the host's secret. If a short name is ambiguous across
-domains, use the FQDN.
+(`www.example.org`), or the host's secret. If a short name is ambiguous
+across domains, use the FQDN.
 
-The target address comes from the first IPv4 in host.json; if that is empty,
-the FQDN is used instead, so DNS must be in place (or /etc/hosts updated, see
-`g8r etc-hosts`).
+The target address comes from the first IPv4 (or IPv6 if `-6` is specified)
+in host.json; if that is empty the FQDN is used instead, so DNS must up to
+date or /etc/hosts updated (see: `g8r etc-hosts`).
 
 Any extra arguments are passed straight to ssh as the remote command.
 

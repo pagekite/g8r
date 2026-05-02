@@ -229,12 +229,14 @@ tac
         ;;
 
     ssh | scp-to | scp-from)
+        G8R_SSH_IP=${G8R_SSH_IP:-ipv4}
+        [ "${1:-}" = "-6" ] && G8R_SSH_IP=ipv6 && shift || true
         H=$(g8r host-secret "${1:-}")
         [ "$H" = "" ] && cat "$G8R_HOME/docs/help/ssh.txt" >&2 && exit 1
         shift
         # shellcheck disable=SC1090,SC1091
         source <(g8r host-cfg "$H")
-        target=$(jq ".g8r_hosts[\"$host_name\"].ipv4[0]" "$G8R_TREE"/hosts-*/"$H/host.json")
+        target=$(jq ".g8r_hosts[\"$host_name\"].$G8R_SSH_IP[0]" "$G8R_TREE"/hosts-*/"$H/host.json")
         [ "$target" = "null" ] && target="$host_name.$host_domain"
         target=${target//\"/}
         case "$COMMAND" in
@@ -258,6 +260,10 @@ tac
         ;;
 
     update)
+        G8R_SSH_IP=${G8R_SSH_IP:-ipv4}
+        [ "${1:-}" = "-6" ] && G8R_SSH_IP=ipv6 && shift || true
+        export G8R_SSH_IP
+
         G8R_PARALLEL=${G8R_PARALLEL:-n}
         if [ "${1:-}" = "-p" ]; then
             G8R_PARALLEL=y
@@ -283,6 +289,10 @@ tac
         ;;
 
     push)
+        G8R_SSH_IP=${G8R_SSH_IP:-ipv4}
+        [ "${1:-}" = "-6" ] && G8R_SSH_IP=ipv6 && shift || true
+        export G8R_SSH_IP
+
         G8R_PARALLEL=${G8R_PARALLEL:-n}
         if [ "${1:-}" = "-p" ]; then
             G8R_PARALLEL=y
