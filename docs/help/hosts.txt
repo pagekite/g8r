@@ -1,0 +1,37 @@
+Usage: g8r hosts [-s|-i|-4|-6|-n] [-d <domain>] [-l <pattern>]
+
+Generate a list of hosts managed by this Governator.
+
+By default, there is one line per host, listing the IPv4 address, IPv6
+address, fully qualified domain name, and governator secret, in that
+order. If an address is unset, the command will print `-` instead.
+
+Example
+
+    $ g8r hosts
+    10.1.2.3   2001:DB8::0a01:0203 myhost.example.org  web-myhost-12323412
+           -                     - www.exmaple.org     web-www-690a0f-eB-fj
+
+Note the values come from each host's rendered config-cache and host.json, so
+newly-added hosts will not appear until you have run `g8r make`.
+
+The output can be limited (reduced) to only one of the values by using
+one of the following options:
+
+    -s  Only the governator host secret
+    -i  An IP address: IPv4 preferred otherwise IPv6 or nothing
+    -4  The IPv4 address (no output if unset)
+    -6  The IPv6 address (no output if unset)
+    -n  The fully qualified domain name of the host
+    -d  The host's configuration directory (relative to .../tree/)
+
+The output can be limited to only hosts within a specific domain, by passing an
+argumenet like `-d example.org`. It can be further limited using a (grep -e)
+pattern match against host secrets by adding `-l pattern` (the order matters,
+if you want both domain and pattern filtering, you must pass `-d` first).
+
+This command is used internally by most g8r commands which can operate on
+multiple hosts (and the above options supported by them for host selection),
+but you can also use it by hand to drive other commands, for example:
+
+    g8r hosts -s | xargs -n1 g8r metrics

@@ -1,0 +1,28 @@
+Usage: g8r ssh <host> [<command> ...]
+       g8r scp-to <host> <dest-path> <source-files ...>
+       g8r scp-from <host> <source-path> [<local dir>]
+
+SSH or SCP as root into a managed host, using the SSH port configured for
+that host (g8r_sshd_port, default 22).
+
+<host> may be a short hostname (`www`), a fully-qualified name
+(`www.example.org`), or the host's secret. If a short name is ambiguous across
+domains, use the FQDN.
+
+The target address comes from the first IPv4 in host.json; if that is empty,
+the FQDN is used instead, so DNS must be in place (or /etc/hosts updated, see
+`g8r etc-hosts`).
+
+Any extra arguments are passed straight to ssh as the remote command.
+
+Examples:
+
+    g8r ssh www
+    g8r ssh www.example.org uptime
+    g8r ssh www -- tail -f /var/log/syslog
+    g8r ssh www g8r ls
+
+    g8r scp-to www /tmp /path/to/source/file1 /path2/file2
+
+    g8r scp-from www /var/log/syslog /tmp/ 
+

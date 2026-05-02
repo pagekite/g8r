@@ -6,12 +6,13 @@ cd "$G8R_HOME"
 PATH="$(pwd):$(pwd)/tools:$PATH"
 export PATH G8R_HOME
 
-if [ "$1" = "" ]; then
+if [ "${1:-}" = "" ]; then
     cat "$G8R_HOME/docs/help/backups.txt"
     exit 1
 fi
-if [ "$1" = "-a" ]; then
-    for HOST in $("$G8R_HOME"/g8r hosts | awk '{print $4}'); do
+if [ "$1" = "-a" ] || [ "$1" = "-d" ] || [ "$1" = "-l" ]; then
+    [ "$1" != "-a" ] && ARGS="$*" || ARGS=""
+    for HOST in $(g8r hosts -s $ARGS); do
         backups-fetch.sh "$HOST" || true
     done
     exit 0

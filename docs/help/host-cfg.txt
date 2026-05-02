@@ -1,0 +1,17 @@
+Usage: g8r host-cfg [--json] <host>
+
+Print the rendered configuration for a single host.
+
+By default the output is shell-syntax (`KEY='value'` lines), suitable
+for sourcing:
+
+    source <(g8r host-cfg www)
+    echo "$host_name $host_domain $g8r_sshd_port"
+
+With --json, the same data is printed as a JSON object instead.
+
+<host> may be a short hostname, a FQDN, or the host's secret.
+
+The config is rendered fresh on every call (via the
+config-cache.jinja-{sh,json} recipes), so it always reflects the
+current state of tree/ -- you do not need to run `g8r make` first.

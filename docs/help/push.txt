@@ -1,0 +1,30 @@
+Usage: g8r push [-p] <script> -a
+       g8r push [-p] <script> -d <domain>
+       g8r push [-p] <script> -l <pattern>
+       g8r push [-p] <script> <host1 host2 ... hostN>
+
+SSH as root into one or more managed hosts and run the specified g8r
+script. The script must exist in the host's configuration directory.
+
+When invoked with `-p`, ssh commands run in parallel, which can cause
+increased load on the g8r server and muddled output. The default is
+sequential pushs.
+
+Each <host> may be a short hostname (`www`), a fully-qualified name
+(`www.example.org`), or the host's secret. See `g8r help ssh` for 
+more details on host names.
+
+See `g8r help hosts` for details on automatic host selection (the `-a`,
+`-d` and `-l` arguments). Note that `-d` can be followed by `-l`.
+
+Examples:
+
+    # Re-run the bootstrap script (in the background)
+    g8r push 000_bootstrap.sh www
+
+    # Multiple hosts, in background and parallel 
+    g8r push -p 000_bootstrap.sh www1 www2 www3
+    g8r push -p 000_bootstrap.sh -d example.org -l www
+
+    # Push the current update script to all hosts, one after another
+    g8r push 000_bootstrap.sh -a

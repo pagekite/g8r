@@ -1,0 +1,8 @@
+Usage: g8r host-info <host>
+
+Print a human-readable summary of a single host: its FQDN, IPv4 and
+IPv6 addresses, and the public bootstrap URL that a freshly-installed
+VPS would curl|bash to provision itself.
+
+<host> may be a short hostname, a FQDN, or the host's secret. If a
+short name is ambiguous across domains, use the FQDN.

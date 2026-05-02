@@ -1,9 +1,16 @@
-Usage: g8r backups [-a] <host_secret> ...
+Usage: g8r backups -a
+       g8r backups -d <domain>
+       g8r backups -l <pattern>
+       g8r backups <host1 host2 ... hostN>
 
 Fetch the backups from one or more hosts (as identified by their host
 secret) and update `tree/backups-manifest.json`.
 
+The `-a`, `-d` and `-l` modes will act upon the same hosts as would be
+listed by the equivalent `g8r hosts` command.
+
+
 ## About g8r backups
 
-STUFF ABOUT BACKUPS
+FIXME: STUFF ABOUT BACKUPS
 

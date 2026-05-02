@@ -29,13 +29,18 @@ case "$COMMAND" in
         exec "$G8R_TOOLS"/init.sh
         ;;
 
-    host-secret)
+    host-secret|host-dir)
         cd "$G8R_HOME"
         # shellcheck disable=SC1091 ## Don't expect shellcheck to check the vars
         source tree/000_base.vars
         target="$1"
         if cd tree/hosts-*/"$target" 2>/dev/null; then
-            echo "$target"
+            if [ "$COMMAND" = "host-dir" ]; then
+                p=$(pwd)
+                echo "$(basename "$(dirname "$p")")/$(basename "$p")"
+            else
+                echo "$target"
+            fi
             exit 0
         fi
         host_name=${target/%.*/}
@@ -47,7 +52,11 @@ case "$COMMAND" in
             host_secret=$(jq .g8r_hosts"[\"$host_name\"]".secret config-cache.json)
             host_secret=${host_secret//\"/}
             if [ "$host_secret" != "" ] && [ "$host_secret" != null ]; then
-                echo "$host_secret"
+                if [ "$COMMAND" = "host-dir" ]; then
+                    echo "$(basename "$(pwd)")/$host_secret"
+                else
+                    echo "$host_secret"
+                fi
                 exit 0
             fi
         fi
@@ -57,11 +66,11 @@ case "$COMMAND" in
 
     host-cfg)
         [ "${1:-}" = '--json' ] && T="json" && shift || T="sh"
-        target=$(g8r host-secret "${1:-}")
+        target=$(g8r host-dir "${1:-}")
         [ "$target" = "" ] && echo "Usage: g8r host-cfg [--json] <host>" >&2 && exit 1
         umask 0077
         cd "$G8R_HOME"
-        if cd tree/hosts-*/"$target" 2>/dev/null; then
+        if cd tree/"$target" 2>/dev/null; then
             target_dir=$(pwd)
             ln -s ../../recipes/config-cache.jinja-$T .g8r-tmp-$$.jinja-$T
             (cd "$G8R_HOME/tree" \
@@ -75,19 +84,73 @@ case "$COMMAND" in
         ;;
 
     hosts)
+        MODE=all
+        [ "${1:-}" = "-s" ] && MODE=hsec && shift
+        [ "${1:-}" = "-i" ] && MODE=addr && shift
+        [ "${1:-}" = "-4" ] && MODE=ipv4 && shift
+        [ "${1:-}" = "-6" ] && MODE=ipv6 && shift
+        [ "${1:-}" = "-n" ] && MODE=fqdn && shift
+        [ "${1:-}" = "-d" ] && MODE=hdir && shift
+
         cd "$G8R_HOME"/tree
-        for ddir in hosts-*; do
-            for host_dir in "$ddir"/*-*-*; do
+        # shellcheck disable=SC2125
+        DOMAINS=hosts-*
+        [ "${1:-}" = "-d" ] && DOMAINS="hosts-$2" && shift && shift
+
+        G8R_HOST_LIMIT="${G8R_HOST_LIMIT:-}"
+        [ "${1:-}" = "-l" ] && G8R_HOST_LIMIT="$2" && shift && shift
+        export G8R_HOST_LIMIT
+
+        [ "${1:-}" != "" ] && cat "$G8R_HOME/docs/help/hosts.txt" && exit 1
+
+        for ddir in $DOMAINS; do
+            # shellcheck disable=SC2015,SC2010
+            HOST_DIRS=$(cd "$ddir" && ls -d1 -- *-*-* |grep -e "$G8R_HOST_LIMIT" || true)
+            for host_secret in $HOST_DIRS; do
+                host_dir="$ddir/$host_secret"
                 if [ -e "$host_dir/host.json" ]; then
-                    host_secret=${host_dir/#*\//}
-                    # shellcheck disable=SC1090,SC1091
-                    source <(g8r host-cfg "$host_secret")
-                    ipv4=$(jq ".g8r_hosts[\"${host_name}\"].ipv4[0]" "$host_dir/host.json")
-                    ipv4=${ipv4//\"/}
-                    ipv6=$(jq ".g8r_hosts[\"${host_name}\"].ipv6[0]" "$host_dir/host.json")
-                    ipv6=${ipv6//\"/}
-                    printf "%15s %32s %-19s %s\\n" \
-                        "$ipv4" "$ipv6" "$host_name.$host_domain" "$host_secret"
+                    case $MODE in
+                      hsec)
+                        echo "$host_secret"
+                        ;;
+                      hdir)
+                        echo "$host_dir"
+                        ;;
+                      *)
+                        # shellcheck disable=SC1090,SC1091
+                        source <(g8r host-cfg "$host_secret")
+                        ipv4=$(jq ".g8r_hosts[\"${host_name}\"].ipv4[0]" "$host_dir/host.json")
+                        ipv4=${ipv4//\"/}
+                        ipv4=${ipv4//null/-}
+                        ipv6=$(jq ".g8r_hosts[\"${host_name}\"].ipv6[0]" "$host_dir/host.json")
+                        ipv6=${ipv6//\"/}
+                        ipv6=${ipv6//null/-}
+                        case $MODE in
+                          all)
+                            printf "%15s %32s %-19s %s\\n" \
+                                "$ipv4" "$ipv6" "$host_name.$host_domain" "$host_secret"
+                            ;;
+                          ipv4)
+                            [ "$ipv4" != "-" ] && echo "$ipv4"
+                            ;;
+                          ipv6)
+                            [ "$ipv6" != "-" ] && echo "$ipv6"
+                            ;;
+                          addr)
+                            if [ "$ipv4" != "-" ]; then
+                                echo "$ipv4"
+                            else
+                                if [ "$ipv6" != "-" ]; then
+                                    echo "$ipv6"
+                                fi
+                            fi
+                            ;;
+                          fqdn)
+                            echo "$host_name.$host_domain"
+                            ;;
+                        esac
+                        ;;
+                    esac
                 fi
             done
         done
@@ -135,13 +198,13 @@ tac
         ;;
 
     rm-host)
-        [ "${1:-}" = "" ] && cat "$G8R_HOME"/docs/help/rm-host.txt && exit 1
+        [ "${1:-}" = "" ] && cat "$G8R_HOME/docs/help/rm-host.txt" && exit 1
         # shellcheck disable=SC2048 ## Happy for white-space to expand
         for H in $*; do
             H=$(g8r host-secret "$H")
             [ "$H" != "" ] && [ ! -e "exposed/hosts/$H/host.json" ] && echo -e "Host not found or ambiguous: $1" >&2
             if [ "$H" = "" ] || [ ! -e "exposed/hosts/$H/host.json" ]; then
-                cat "$G8R_HOME"/docs/help/rm-host.txt >&2
+                cat "$G8R_HOME/docs/help/rm-host.txt" >&2
                 exit 1
             fi
             # shellcheck disable=SC1090,SC1091
@@ -165,22 +228,99 @@ tac
         exec "$G8R_TOOLS"/metrics-get.sh "$@"
         ;;
 
-    ssh)
-        H=$(g8r host-secret "$1")
-        [ "$H" = "" ] && echo "SSH to where?" >&2 && exit 1
+    ssh|scp-to|scp-from)
+        H=$(g8r host-secret "${1:-}")
+        [ "$H" = "" ] && cat "$G8R_HOME/docs/help/ssh.txt" >&2 && exit 1
         shift
         # shellcheck disable=SC1090,SC1091
         source <(g8r host-cfg "$H")
 	target=$(jq ".g8r_hosts[\"$host_name\"].ipv4[0]" "$G8R_TREE"/hosts-*/"$H/host.json")
-	[ "$target" = "" ] && target="$host_name.$host_domain"
+	[ "$target" = "null" ] && target="$host_name.$host_domain"
         target=${target//\"/}
-        echo "Attempting: ssh -p ${g8r_sshd_port:-22} root@$target ..." >&2
-        exec ssh -p "${g8r_sshd_port:-22}" "root@$target" "$@"
+        case "$COMMAND" in
+          ssh)
+            echo "Attempting: ssh -p ${g8r_sshd_port:-22} root@$target ..." >&2
+            exec ssh -p "${g8r_sshd_port:-22}" "root@$target" "$@"
+            ;;
+          scp-to)
+            tpath="$1"
+            shift
+            echo "Attempting: scp -P ${g8r_sshd_port:-22} ... root@$target:$tpath" >&2
+            exec scp -P "${g8r_sshd_port:-22}" "$@" "root@$target:$tpath"
+            ;;
+          scp-from)
+            tpath="$1"
+            shift
+            echo "Attempting: scp -P ${g8r_sshd_port:-22} root@$target:$tpath ..." >&2
+            exec scp -P "${g8r_sshd_port:-22}" "root@$target:$tpath" "$@"
+            ;;
+        esac
         ;;
 
     update)
-        [ "$1" = "" ] && cat "$G8R_HOME"/docs/help/update.txt >&2 && exit 1
-        exec g8r ssh "$1" g8r run --force 900_update.sh
+        G8R_PARALLEL=${G8R_PARALLEL:-n}
+        if [ "${1:-}" = "-p" ]; then
+            G8R_PARALLEL=y
+            shift
+        fi
+        export G8R_PARALLEL
+        [ "${1:-}" = "" ] && cat "$G8R_HOME/docs/help/update.txt" >&2 && exit 1
+        # shellcheck disable=SC2046,SC2048,SC2086
+        [ "$1" = "-a" ] && exec g8r update $(g8r hosts -s)
+        # shellcheck disable=SC2046,SC2048,SC2086
+        [ "$1" = "-d" ] && exec g8r update $(g8r hosts -s $*)
+        # shellcheck disable=SC2046,SC2048,SC2086
+        [ "$1" = "-l" ] && exec g8r update $(g8r hosts -s $*)
+        # shellcheck disable=SC2048
+        for host in $*; do
+            if [ "$G8R_PARALLEL" = "y" ]; then
+                g8r ssh "$host" g8r run --force 900_update.sh &
+                sleep 1
+            else
+                g8r ssh "$host" g8r run --force 900_update.sh
+            fi
+        done
+        ;;
+
+    push)
+        G8R_PARALLEL=${G8R_PARALLEL:-n}
+        if [ "${1:-}" = "-p" ]; then
+            G8R_PARALLEL=y
+            shift
+        fi
+        export G8R_PARALLEL
+        [ "${2:-}" = "" ] && cat "$G8R_HOME/docs/help/push.txt" >&2 && exit 1
+
+        script="$1"
+        shift
+
+        ECODE=0
+        # shellcheck disable=SC2046,SC2048,SC2086
+        [ "$1" = "-a" ] && exec g8r push "$script" $(g8r hosts -s)
+        # shellcheck disable=SC2046,SC2048,SC2086
+        [ "$1" = "-d" ] && exec g8r push "$script" $(g8r hosts -s $*)
+        # shellcheck disable=SC2046,SC2048,SC2086
+        [ "$1" = "-l" ] && exec g8r push "$script" $(g8r hosts -s $*)
+        # shellcheck disable=SC2048
+        for host in $*; do
+            host_dir=$(g8r host-dir "$host")
+            if [ -e "$G8R_TREE/$host_dir/$script" ]; then
+                tdir=/var/lib/g8r/scripts/
+                if ! g8r scp-to "$host" "$tdir" "$G8R_TREE/$host_dir/$script"; then
+                    g8r ssh "$host" mkdir -p "$tdir"
+                    g8r scp-to "$host" "$tdir" "$G8R_TREE/$host_dir/$script"
+                fi
+                if [ "$G8R_PARALLEL" = "y" ]; then
+                    g8r ssh "$host" "g8r run \"$script\" </dev/null >/dev/null 2>&1 &"
+                else
+                    g8r ssh "$host" g8r run "$script"
+                fi
+            else
+                echo "Not found in $host_dir: $script" >&2
+                ECODE=1
+            fi
+        done
+        exit $ECODE
         ;;
 
     ls)
@@ -206,15 +346,14 @@ tac
         ;;
 
     run)
-        [ "$1" = "" ] && exit 1
         G8R_FORCE=n
-        if [ "$1" = "--force" ]; then
-            G8R_FORCE=y
-            shift
-        fi
+        [ "${1:-}" = "--force" ] && G8R_FORCE=y && shift
+
+        [ "${1:-}" = "" ] && echo "Run what? Try: g8r ls" >&2 && exit 1
         G8R_SCRIPT="$1"
         G8R_S_PATH="${G8R_HOME}/scripts/$G8R_SCRIPT"
         shift
+
         if [ -x "$G8R_S_PATH" ]; then
             cd "$G8R_HOME"
             G8R_TS=$(date +%Y%d%mT%H%M%S)
@@ -262,12 +401,15 @@ tac
     add-host   Add a new host (run w/o args for help)
     etc-hosts  Update /etc/hosts on this machine using current inventory
     rm-host    Remove a host (run w/o args for help)
+    hosts      Lists configured hosts: [ipv4, ipv6, fqdn, host-secret]
 
-    backups    Download the most recent backups from a host
     deploy     Deploy a host on the VPS provider of your choice
+    backups    Download the most recent backups from a host
     metrics    Fetch the metrics/monitoring data from a host
+    host-cfg   Display variables configuration for a given host
     ssh        SSH (as root) into a specific host
-    update     Run \`g8r run --force 900_update.sh\` on a host
+   *push       Update a chosen script run it (over SSH) on one or more hosts
+   *update     Run \`g8r run --force 900_update.sh\` on one or more hosts
    *undeploy   Undeploy a host (delete the VPS)
 tac
             [ -e "$G8R_HOME/scripts/" ] && cat <<tac

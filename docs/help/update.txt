@@ -1,0 +1,26 @@
+Usage: g8r update [-p] -a
+       g8r update [-p] -d <domain>
+       g8r update [-p] -l <pattern>
+       g8r update [-p] <host1 host2 ... hostN>
+
+SSH as root into one or more managed hosts and run the g8r update
+script (`900_update.sh`) on each.
+
+When invoked with `-p`, ssh commands run in parallel (spaced one second
+apart), silently, in the background on the host. This is faster and also
+avoids updates getting terminated prematurely if connectivity with the
+g8r master is interrupted. The default is sequential updates.
+
+Each <host> may be a short hostname (`www`), a fully-qualified name
+(`www.example.org`), or the host's secret. See `g8r help ssh` for 
+more details on host names.
+
+See `g8r help hosts` for details on automatic host selection (the `-a`,
+`-d` and `-l` arguments). Note that `-d` can be followed by `-l`.
+
+Examples:
+
+    g8r update www
+    g8r update -p www1 www2 www3
+    g8r update -p -d example.org
+    g8r update -a
