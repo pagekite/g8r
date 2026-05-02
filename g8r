@@ -237,7 +237,7 @@ tac
         # shellcheck disable=SC1090,SC1091
         source <(g8r host-cfg "$H")
         target=$(jq ".g8r_hosts[\"$host_name\"].$G8R_SSH_IP[0]" "$G8R_TREE"/hosts-*/"$H/host.json")
-        [ "$target" = "null" ] && target="$host_name.$host_domain"
+        [ "$target" = "null" ] && target="$host_name.$host_domain" && G8R_SSH_IP=none
         target=${target//\"/}
         case "$COMMAND" in
             ssh)
@@ -247,12 +247,14 @@ tac
             scp-to)
                 tpath="$1"
                 shift
+	        [ "$G8R_SSH_IP" = "ipv6" ] && target="[$target]"
                 echo "Attempting: scp -P ${g8r_sshd_port:-22} ... root@$target:$tpath" >&2
                 exec scp -P "${g8r_sshd_port:-22}" "$@" "root@$target:$tpath"
                 ;;
             scp-from)
                 tpath="$1"
                 shift
+	        [ "$G8R_SSH_IP" = "ipv6" ] && target="[$target]"
                 echo "Attempting: scp -P ${g8r_sshd_port:-22} root@$target:$tpath ..." >&2
                 exec scp -P "${g8r_sshd_port:-22}" "root@$target:$tpath" "$@"
                 ;;
