@@ -5,5 +5,5 @@ global domain varibles at the same time.
 
 Examples:
 
-    g8r add-domain foo.com g8r_sshd_port=23 g8r_always_install="screen git"
+    g8r add-domain foo.com g8r_sshd_port=992 g8r_always_install="screen git"
 

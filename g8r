@@ -239,24 +239,25 @@ tac
         target=$(jq ".g8r_hosts[\"$host_name\"].$G8R_SSH_IP[0]" "$G8R_TREE"/hosts-*/"$H/host.json")
         [ "$target" = "null" ] && target="$host_name.$host_domain" && G8R_SSH_IP=none
         target=${target//\"/}
+	G8R_SSH_PORT=${G8R_SSH_PORT:-${g8r_sshd_port:-22}}
         case "$COMMAND" in
             ssh)
-                echo "Attempting: ssh -p ${g8r_sshd_port:-22} root@$target ..." >&2
-                exec ssh -p "${g8r_sshd_port:-22}" "root@$target" "$@"
+                echo "Attempting: ssh -p $G8R_SSH_PORT root@$target ..." >&2
+                exec ssh -p "$G8R_SSH_PORT" "root@$target" "$@"
                 ;;
             scp-to)
                 tpath="$1"
                 shift
 	        [ "$G8R_SSH_IP" = "ipv6" ] && target="[$target]"
-                echo "Attempting: scp -P ${g8r_sshd_port:-22} ... root@$target:$tpath" >&2
-                exec scp -P "${g8r_sshd_port:-22}" "$@" "root@$target:$tpath"
+                echo "Attempting: scp -P $G8R_SSH_PORT ... root@$target:$tpath" >&2
+                exec scp -P "$G8R_SSH_PORT" "$@" "root@$target:$tpath"
                 ;;
             scp-from)
                 tpath="$1"
                 shift
 	        [ "$G8R_SSH_IP" = "ipv6" ] && target="[$target]"
-                echo "Attempting: scp -P ${g8r_sshd_port:-22} root@$target:$tpath ..." >&2
-                exec scp -P "${g8r_sshd_port:-22}" "root@$target:$tpath" "$@"
+                echo "Attempting: scp -P $G8R_SSH_PORT root@$target:$tpath ..." >&2
+                exec scp -P "$G8R_SSH_PORT" "root@$target:$tpath" "$@"
                 ;;
         esac
         ;;
