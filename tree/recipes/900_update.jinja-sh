@@ -61,7 +61,7 @@ if [ -e /var/lib/g8r/scripts/900_hourly-cron.sh ]; then
 # at bootstrap time, in a stable-yet-unpredictable (hashed) way, to prevent
 # too many hosts from running their jobs at the exact same time.
 #
-{{ cron_hour }} * * * * root /bin/g8r run --force 900_hourly-cron.sh >/dev/null
+{{ cron_hour }} * * * * root /bin/g8r run --force 900_hourly-cron.sh >/var/lib/g8r/logs/last-hourly-cron.log 2>&1
 tac
     if [ "$CMD5" != "$(md5sum </etc/cron.d/g8r-hourly)" ]; then
         systemctl restart cron || true

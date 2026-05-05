@@ -1,7 +1,9 @@
 #!/bin/bash
 export G8R_PING_URL="{{ g8r_url_base }}/events/"
+export G8R_TOOLS=/var/lib/g8r/tools
 export G8R_SCRIPTS=/var/lib/g8r/scripts
 export G8R_BACKUPS=/var/lib/g8r/backups
+export PATH="$G8R_TOOLS:$PATH"
 export LC_ALL=C
 export LANG=C
 set -x
@@ -71,6 +73,7 @@ fi
 ##############################################################################
 {%- set sinfo = cat('800_update-schedule.json')|from_json %}
 {%- set schedule = sinfo.get('g8r_update_schedule', {}).get(host_name, 0) %}
+RAN=""
 {%- if schedule %}
 #
 # These are scheduled updates; package updates, OS reboots and service
@@ -80,6 +83,7 @@ fi
 # restarts or reboots.
 #
 for t in $NOW $WNOW $WDAY; do
+  [ "$RAN" = "" ] && RAN="$t"
   case "$t" in
 {%-   for timespec, act in schedule.items() %}
 {%-     set running = act[0] %}
@@ -90,11 +94,16 @@ for t in $NOW $WNOW $WDAY; do
 {%-     endif %}
         ;;
 {%-   endfor %}
+    *) [ "$RAN" = "$t" ] && RAN=""  # Nothing ran! If this loop set RAN=, undo
+        ;;
   esac
 done
 {%- else %}
 # No scheduledu updates configured. See: g8r help schedule
 {%- endif %}
+if [ "$RAN" = "" ] && [ -e /var/lib/g8r/automations.json ]; then
+    automation_runner.py /var/lib/g8r/automations.json
+fi
 
 
 exit 0  # ##[ End of normal script, only fragments follow ]###################
@@ -117,7 +126,7 @@ apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--fo
 #
 curl -s "${G8R_PING_URL}?drain={{ host_g8r_secret }}" || true
 sleep 1800
-for SCRIPT in $(g8r ls); do
+for SCRIPT in $(g8r ls |grep -v 900_hourly); do
     fragment-run.sh "$G8R_SCRIPTS/$SCRIPT" "RESTART"
 done
 curl -s "${G8R_PING_URL}?undrain={{ host_g8r_secret }}" || true

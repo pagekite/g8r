@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+cd /
+export LC_ALL=C
+export LANG=C
+set -x
+set -e
+
+
+{% set fqdn = host_name + '.' + host_domain -%}
+{%- if g8r_host_automations -%}
+#############################################################################
+# Generate our automations.json file; the automations themselves run out of
+# the hourly cron job (as long as no other updates are in flight).
+#
+cat <<tac >/var/lib/g8r/automations.json
+{
+  "max_run_hours": 1,
+  "sleep_seconds": 15,
+  "record_progress": "/var/lib/g8r/automations-progress.json",
+  "log_files": [
+    "/var/log/caddy/access-{{ fqdn }}.log",
+{%- for domain, svc in (g8r_service_domains|default({})).items() %}
+ {%- if host_name in svc.hosts|default([host_name]) and domain != fqdn %}
+    "/var/log/caddy/access-{{ domain }}.log",
+ {%- endif %}
+{%- endfor %}
+    "/var/log/lighttpd/access.log",
+    "/var/log/apache2/access.log"
+  ],
+  "log_events": [
+    [".*\\\\?g8r_event=site_update", "SITE_UPDATE"],
+    [".*\\\\?g8r_event=g8r_update", "G8R_UPDATE"]
+  ],
+
+  "scheduled_events": {},
+  "update_variables": [],
+
+  "automations": [
+    ["G8R_UPDATE",   "g8r", "run", "--force", "900_update.sh"],
+    ["SITE_UPDATE",  "update_variables.py"]
+  ]
+}
+tac
+{% else %}
+# Automations disabled. Set g8r_host_automations to enable.
+rm -f /var/lib/g8r/automations*.json
+{% endif %}
+
+
+#EOF#

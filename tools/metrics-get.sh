@@ -31,7 +31,7 @@ if [ "$1" = "-a" ]; then
     HOSTS="$*"
     for hd in $(find tree -type f -name 102_metrics.sh | cut -d/ -f1-3); do
         SECRET="$(echo "$hd" | cut -d/ -f3)"
-        # shellcheck disable=SC2086
+        # shellcheck disable=SC2086,SC2102
         SEEN="$(jq .status[\"$SECRET\"].seen.when tree/status/summary.json)"
         if [ "$SEEN" != null ]; then
             # shellcheck disable=SC1090,SC1091,SC2154

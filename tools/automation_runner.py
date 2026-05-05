@@ -113,6 +113,15 @@ class AutomationRunner:
         for event in self.log_events:
             event[0] = re.compile(event[0])
 
+        self.log_positions_file = self.config.get('record_progress')
+        if self.log_positions_file:
+            try:
+                with open(self.log_positions_file, 'r') as fd:
+                    lps = json.load(fd)
+                    lps.update(self.log_positions)  # Trust internal state
+                    self.log_positions = lps
+            except (OSError, ValueError):
+                pass
         for lf in self.log_files:
             if lf not in self.log_positions:
                 self.log_positions[lf] = -1
@@ -163,6 +172,12 @@ class AutomationRunner:
             if os.path.exists(lf):
                 for event_tuple in self.check_file(lf):
                     yield event_tuple
+        if self.log_files and self.log_positions_file:
+            try:
+                with open(self.log_positions_file, 'w') as fd:
+                    fd.write(json.dumps(self.log_positions))
+            except (OSError, ValueError):
+                pass
 
     def run_cmd(self, cmd):
         try:
