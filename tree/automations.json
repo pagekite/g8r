@@ -96,6 +96,7 @@
     ["GIT_UPDATE",      "/path/to/bin/update-git-repos.sh"],
     ["SITE_UPDATE",     "/path/to/bin/update-site-content.sh", "$re_domain"],
     ["VARS_UPDATE",     "update_variables.py"],
-    ["REBUILD",         "g8r", "make"]
+    ["REBUILD",         "g8r", "make"],
+    ["HOST_UPDATE",     "g8r", "update", "$host"]
   ]
 }

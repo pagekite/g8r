@@ -20,9 +20,26 @@ case "$COMMAND" in
         ;;
 
     make)
+	MARKER=$(cd "$G8R_HOME" && pwd)/.update-marker
+	touch "$MARKER"
+
         "$G8R_TOOLS"/update_variables.py
         cd "$G8R_HOME"/tree
-        make "$@" || make "$@"
+        make "${@:-all}" || make "${@:-all}"
+
+	# If any of the hosts under canaries have changed, we trigger
+	# a HOST_UPDATE automation. But we set a run_once ID, so this
+	# only happens if the contents actually changed.
+	find -L "$G8R_HOME"/tree/canaries \
+	    -type f -name index.html -newer "$MARKER" \
+	|while read FN; do
+	    host_secret=$(basename "$(dirname "$FN")")
+	    run_once_id="up/$host_secret/$(md5sum "$FN" |cut -f1 -d\ )"
+	    echo AUTOMATION: HOST_UPDATE \{\
+	        \"host\": \""$host_secret"\",\
+	        \"run_once\": \""$run_once_id"\"\}
+        done
+	rm -f "$MARKER"
         ;;
 
     init)

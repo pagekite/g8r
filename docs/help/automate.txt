@@ -22,7 +22,7 @@ The automation loop does three kinds of work:
      These migrations are used to aggregate information or implement
      CI/CD workflows: build scripts will generate manifests of current
      version numbers, which migrate to the configurations of live (canary)
-     hosts, which upon a rebuild will ultimately trigger an update. 
+     hosts, which upon a rebuild will ultimately trigger an update.
 
 Automations themselves are listed in the JSON configuration under
 `automations`: a name and a shell command (with `$var` placeholders filled in
@@ -31,6 +31,11 @@ eliminating concerns about race conditions or overlapping processes. An
 automation may chain another by printing `AUTOMATION: NAME` to stdout, but this
 will only work if the triggered automation is downstream (later in the list)
 from the one triggering it.
+
+Triggered automations can take an optional JSON-formatted list of arguments,
+e.g. `AUTOMATION: HOST_UPDATE {"run_once": "op_id_string", "host": "www"}`,
+which is used to parametrize automation runs, and optionally (if `run_once`
+is present) suppress repeating the same command over and over again.
 
 The `max_run_hours` setting will cap how long the loop runs before
 exiting; 0 means run forever. `sleep_seconds` controls the polling

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#
+"""
 # This process runs in a loop, running some or all of the automations
 # defined in `automations.json`.
 #
@@ -10,10 +10,11 @@
 # recently in the watched log files, or in the cron section of the JSON.
 #
 # Automations can be chained, one can trigger another by printing to
-# STDOUT a line formatted as so: "AUTOMATION: NAME", where NAME is the
-# name of the automation to trigger. That this will only work if the
-# triggered automation is scheduled to run after the one triggering it.
-#
+# STDOUT a line formatted as so: "AUTOMATION: NAME {...}",  where NAME is
+# the name of the automation to trigger and the {...} is an optional JSON
+# object that will be included as arguments. Note this will only work if
+# the triggered automation is scheduled to run after the one triggering.
+"""
 
 import datetime
 import json
@@ -198,7 +199,7 @@ class AutomationRunner:
             for line in stdout.splitlines():
                 line = line.rstrip()
                 if line.startswith('AUTOMATION:'):
-                    yield line
+                    yield line.split(':', 1)[-1].lstrip()
                 else:
                     self.stdout(line)
 
@@ -218,14 +219,30 @@ class AutomationRunner:
 
             cmd_string = ' '.join([cmd] + cmd_list[1:])
             if cmd_string in self.ran_recently:
-                return
+                # Important: The run_once logic is explicitly designed to
+                # only keep track of the most recent version of the command,
+                # not all versions. We  need to be able to rerun a command
+                # for rollbacks, but a rollback will by definition differ
+                # from the last run. So this should be fine.
+                if 'run_once' not in info:
+                    return
+                if self.ran_recently[cmd_string] == info['run_once']:
+                    return
 
-            self.ran_recently[cmd_string] = True
+            # Setting to True only prevents duplicate runs within the current
+            # batch. If `run_once` is set, this persists between batches.
+            self.ran_recently[cmd_string] = info.get('run_once', True)
             if not os.path.exists(cmd_path):
                 raise OSError('Not found: %s' % cmd)
 
             self.stdout(' * %s: %s' % (event, cmd_string))
-            yield [a.split(': ')[1] for a in self.run_cmd(cmd_list)], {}
+            for trigger in self.run_cmd(cmd_list):
+                if ' ' in trigger:
+                    aname, ajson = trigger.split(' ', 1)
+                    args = json.loads(ajson)
+                else:
+                    aname, args = trigger, {}
+                yield [aname], args
 
         except Exception as e:
             if not cmd_string:
@@ -255,7 +272,11 @@ class AutomationRunner:
 
     def loop_main(self, start_time, deadline):
         self.load_config()
-        self.ran_recently = {}
+
+        # Prune select events from ran_recently; see run_command for why
+        prune = [k for k, v in self.ran_recently.items() if v is True]
+        for k in prune:
+            del self.ran_recently[k]
 
         now = time.time()
         max_run_hours = self.config.get('max_run_hours')
