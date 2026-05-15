@@ -158,6 +158,14 @@ fi
 exit 0  # ##[ End of normal script, only fragments follow ]###################
 
 
+######################################################[ BEGIN_G8R_RESTART ]###
+# Restart fragment; systemd takes care of it
+#
+systemctl restart caddy
+
+#END_G8R_RESTART#
+
+
 ######################################################[ BEGIN_G8R_BACKUPS ]###
 #
 # This is our backup script.

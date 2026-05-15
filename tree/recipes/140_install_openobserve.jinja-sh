@@ -3,6 +3,7 @@
 cd /
 export LC_ALL=C
 export LANG=C
+export G8R_TOOLS=/var/lib/g8r/tools
 set -x
 set -e
 
@@ -132,17 +133,18 @@ docker-compose up -d
 
 
 # Expose as metric that this update happened
-TOOLS=/var/lib/g8r/tools
-"$TOOLS"/metrics.sh openobserve_updated openobserve_updated gauge "$(date +%s)"
-"$TOOLS"/metrics.sh openobserve_health0 openobserve_health0 gauge "$(date +%s)"
+NOW="$(date +%s)"
+"$G8R_TOOLS"/metrics.sh openobserve_updated openobserve_updated gauge "$NOW"
+"$G8R_TOOLS"/metrics.sh openobserve_health0 openobserve_health0 gauge "$NOW"
 
 
 ###################################################[BEGIN_G8R_HEALTH_CHECK]###
 # Mark the service healthy, if it is indeed healthy.
 # This must come last, so `g8r healthchk` can run.
 #
-TOOLS=/var/lib/g8r/tools
+G8R_TOOLS=/var/lib/g8r/tools
 HEALTHY=y
+NOW="$(date +%s)"
 
 URL=http://localhost:5080
 if [ "$(curl -s http://localhost:5080/web/ |grep -c MonacoEnv)" -lt 1 ]; then
@@ -150,16 +152,26 @@ if [ "$(curl -s http://localhost:5080/web/ |grep -c MonacoEnv)" -lt 1 ]; then
 fi
 
 if [ "$HEALTHY" = "y" ]; then
-    "$TOOLS"/healthy.sh openobserve
+    "$G8R_TOOLS"/healthy.sh openobserve
 else
     # Reset our helath0 gauge - it can be used to calculate how long we have
     # been continuously healthy.
-    "$TOOLS"/metrics.sh openobserve_health0 openobserve_health0 gauge "$(date +%s)"
+    "$G8R_TOOLS"/metrics.sh openobserve_health0 openobserve_health0 gauge "$NOW"
 fi
 #END_G8R_HEALTH_CHECK#
 
 exit 0  # ##[ End of normal script, only fragments follow ]###################
 
+
+######################################################[ BEGIN_G8R_BACKUPS ]###
+#
+# This is our backup script.
+
+# Tell g8r to add the Caddy logs to the .tgz backup.
+# We have taken care above to avoid this being too much data at once.
+echo "G8R_TGZ_BACKUPS=/var/lib/openobserve/data/db"
+
+#END_G8R_BACKUPS#
 
 
 #EOF#
