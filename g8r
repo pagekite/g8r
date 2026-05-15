@@ -25,7 +25,7 @@ case "$COMMAND" in
 
         "$G8R_TOOLS"/update_variables.py
         cd "$G8R_HOME"/tree
-        make "${@:-all}" || make "${@:-all}"
+        make -j4 "${@:-all}" || make "${@:-all}"
 
 	# If any of the hosts under canaries have changed, we trigger
 	# a HOST_UPDATE automation. But we set a run_once ID, so this
@@ -372,22 +372,28 @@ tac
 
     ls)
         cd "$G8R_HOME"/scripts 2>/dev/null && ls -1d -- *.sh 2>/dev/null && exit 0
-        echo "No g8r scripts installed (this command is only used on g8r managed hosts)." >&2
+        echo "No g8r scripts installed ($COMMAND is only used on g8r managed hosts)." >&2
         exit 1
         ;;
 
-    healthchk)
+    run-fragment)
         if cd "$G8R_HOME"/scripts 2>/dev/null; then
+	    FRAG=$1
+	    shift
             if [ "$1" = "-a" ]; then
                 for s in $(g8r ls); do
-                    fragment-run.sh "$G8R_HOME/scripts/$s" HEALTH_CHECK
+                    fragment-run.sh "$G8R_HOME/scripts/$s" "$FRAG"
                 done
             else
-                fragment-run.sh "$G8R_HOME/scripts/$1" HEALTH_CHECK
+                fragment-run.sh "$G8R_HOME/scripts/$1" "$FRAG"
             fi
         else
-            echo "No g8r scripts installed (this command is only used on g8r managed hosts)." >&2
+            echo "No g8r scripts installed ($COMMAND is only used on g8r managed hosts)." >&2
         fi
+        ;;
+
+    healthchk)
+	g8r run-fragment HEALTH_CHECK "$@"
         ;;
 
     run)

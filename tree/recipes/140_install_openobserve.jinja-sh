@@ -14,12 +14,10 @@ ZO_AUTH="{{ (openobserve_email + ":" + openobserve_pass)|base64 }}"
 
 
 #############################################################################
-# Install dockerized OpenObserve
+# Install prerequisites
 #
 apt-get update
 apt-get install docker-compose docker.io
-docker pull public.ecr.aws/zinclabs/openobserve:latest
-docker pull otel/opentelemetry-collector:0.152.0
 
 
 #############################################################################
@@ -84,7 +82,7 @@ tac
 
 
 #############################################################################
-# Launch prometheus and grafana using Docker compose
+# Create docker-compose file to launch OpenObserve and the OTEL collector
 #
 cat <<tac >/etc/openobserve/docker-compose.yml
 services:
@@ -113,9 +111,24 @@ services:
     restart: unless-stopped
 tac
 
+
+########################################################[BEGIN_G8R_UPGRADE]###
+# Install/upgrade dockerized OpenObserve
+#
+docker pull public.ecr.aws/zinclabs/openobserve:latest
+docker pull otel/opentelemetry-collector:0.152.0
+
+
+########################################################[BEGIN_G8R_RESTART]###
+# (Re)Start the services
+#
 cd /etc/openobserve
 docker-compose down
 docker-compose up -d
+
+
+#END_G8R_RESTART#  Note: The upgrade fragment includes the restart fragment.
+#END_G8R_UPGRADE#
 
 
 # Expose as metric that this update happened
