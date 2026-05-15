@@ -59,7 +59,7 @@ for TARGET_HOST in $*; do
             >/dev/null
     done
 
-    if [ "$(md5sum <manifest-new.json)" != "$(md5sum <manifest.json 2>/dev/null || true)" ]; then
+    if [ -e manifest.json ] && [ "$(md5sum <manifest-new.json)" != "$(md5sum <manifest.json)" ]; then
         mv -f manifest-new.json manifest.json
     else
         rm -f manifest-new.json

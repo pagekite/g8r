@@ -1,0 +1,152 @@
+#!/bin/bash
+#
+cd /
+export LC_ALL=C
+export LANG=C
+set -x
+set -e
+
+{% set openobserve_email = openobserve_email|default("root@" + host_domain) %}
+{%- set openobserve_pass = openobserve_pass|default(host_g8r_secret) %}
+ZO_USER_EMAIL="{{ openobserve_email }}"
+ZO_USER_PASS="{{ openobserve_pass }}"
+ZO_AUTH="{{ (openobserve_email + ":" + openobserve_pass)|base64 }}"
+
+
+#############################################################################
+# Install dockerized OpenObserve
+#
+apt-get update
+apt-get install docker-compose docker.io
+docker pull public.ecr.aws/zinclabs/openobserve:latest
+docker pull otel/opentelemetry-collector:0.152.0
+
+
+#############################################################################
+# Configure
+#
+mkdir -p /etc/openobserve /var/lib/openobserve/data
+chown nobody:nogroup /var/lib/openobserve/data
+cat <<tac >/etc/openobserve/otel-collector-config.yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'scrape-hosts'
+          basic_auth:
+            username: "governator"
+            password: "{{ g8r_metrics_secret }}"
+          scrape_interval: 30s
+          static_configs:
+            - targets:
+{%- for host_name in g8r_hosts|default({}) %}
+{%-   if g8r_hosts[host_name].ipv4 %}
+                - '{{ g8r_hosts[host_name].ipv4[0] }}:1987'
+{%-   elif g8r_hosts[host_name].ipv6 %}
+                - '[{{ g8r_hosts[host_name].ipv6[0] }}]:1987'
+{%-   endif %}
+{%- endfor %}
+
+processors:
+  batch:
+    send_batch_size: 8192
+    timeout: 5s
+    send_batch_max_size: 10240
+
+exporters:
+  otlphttp/openobserve:
+    endpoint: "http://127.0.0.1:5080/api/default"
+    headers:
+      Authorization: "Basic $ZO_AUTH"
+
+service:
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/openobserve]
+    metrics:
+      receivers: [otlp,prometheus]
+      processors: [batch]
+      exporters: [otlphttp/openobserve]
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/openobserve]
+tac
+
+
+#############################################################################
+# Launch prometheus and grafana using Docker compose
+#
+cat <<tac >/etc/openobserve/docker-compose.yml
+services:
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve
+    container_name: openobserve
+    network_mode: "host"
+    environment:
+      - ZO_ROOT_USER_EMAIL=$ZO_USER_EMAIL
+      - ZO_ROOT_USER_PASSWORD=$ZO_USER_PASS
+      - ZO_DATA_DIR=/data
+      - ZO_HTTP_ADDR=127.0.0.1
+      - ZO_HTTP_PORT=5080
+    volumes:
+      - /var/lib/openobserve/data:/data
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector
+    command: ["--config=/etc/otel-collector.yaml"]
+    network_mode: "host"
+    volumes:
+      - /etc/openobserve/otel-collector-config.yaml:/etc/otel-collector.yaml
+    depends_on:
+      - openobserve
+    restart: unless-stopped
+tac
+
+cd /etc/openobserve
+docker-compose down
+docker-compose up -d
+
+
+# Expose as metric that this update happened
+TOOLS=/var/lib/g8r/tools
+"$TOOLS"/metrics.sh openobserve_updated openobserve_updated gauge "$(date +%s)"
+"$TOOLS"/metrics.sh openobserve_health0 openobserve_health0 gauge "$(date +%s)"
+
+
+###################################################[BEGIN_G8R_HEALTH_CHECK]###
+# Mark the service healthy, if it is indeed healthy.
+# This must come last, so `g8r healthchk` can run.
+#
+TOOLS=/var/lib/g8r/tools
+HEALTHY=y
+
+URL=http://localhost:5080
+if [ "$(curl -s http://localhost:5080/web/ |grep -c MonacoEnv)" -lt 1 ]; then
+    HEALTHY=n
+fi
+
+if [ "$HEALTHY" = "y" ]; then
+    "$TOOLS"/healthy.sh openobserve
+else
+    # Reset our helath0 gauge - it can be used to calculate how long we have
+    # been continuously healthy.
+    "$TOOLS"/metrics.sh openobserve_health0 openobserve_health0 gauge "$(date +%s)"
+fi
+#END_G8R_HEALTH_CHECK#
+
+exit 0  # ##[ End of normal script, only fragments follow ]###################
+
+
+
+#EOF#

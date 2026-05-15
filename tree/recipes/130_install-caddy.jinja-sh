@@ -148,7 +148,7 @@ fi
 if [ "$HEALTHY" = "y" ]; then
     /var/lib/g8r/tools/healthy.sh caddy
 else
-    # Reset our updated gauge - it can be used to calculate how long we have
+    # Reset our health0 gauge - it can be used to calculate how long we have
     # been continuously healthy.
     /var/lib/g8r/tools/metrics.sh caddy_health0 caddy_health0 gauge "$(date +%s)"
 fi

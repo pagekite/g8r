@@ -37,8 +37,8 @@ cat <<tac >/var/lib/g8r/automations.json
   "update_variables": [],
 
   "automations": [
-    ["G8R_UPDATE",   "g8r", "run", "--force", "900_update.sh"],
-    ["SITE_UPDATE",  "update_variables.py"]
+    ["G8R_UPDATE", "g8r", "run", "--force", "900_update.sh"],
+    ["SITE_UPDATE", "g8r", "run-fragment", "SITE_UPDATE", "-a"]
   ]
 }
 tac

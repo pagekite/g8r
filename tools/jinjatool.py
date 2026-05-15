@@ -32,6 +32,7 @@ or with foo=bar pairs from the command line.
 Variable definitions and input/output rendering pairs can be mixed and
 matched and will be processed in order.
 """
+import base64
 import copy
 import datetime
 import hashlib
@@ -163,6 +164,8 @@ class JinjaToolExtension(Extension):
         env.filters['without'] = self._without
         env.filters['markdown'] = self._markdown
         env.filters['to_json'] = self._to_json
+        env.filters['base64'] = self._to_base64
+        env.filters['urlsafe_base64'] = self._to_urlsafe_base64
         env.filters['from_json'] = self._from_json
         env.filters['from_rfc822'] = self._from_rfc822
         env.filters['from_vars_txt'] = self._from_vars_txt
@@ -340,6 +343,14 @@ class JinjaToolExtension(Extension):
 
     def _markdown(self, text):
         return Markup(toc_friendly_markdown(mtext))
+
+    def _to_base64(self, data):
+        data = bytes(data, 'utf-8') if isinstance(data, str) else data
+        return str(base64.b64encode(data), 'utf-8').strip()
+
+    def _to_urlsafe_base64(self, data):
+        data = bytes(data, 'utf-8') if isinstance(data, str) else data
+        return str(base64.urlsafe_b64encode(data), 'utf-8').strip()
 
     def _to_json(self, data):
         j = json.dumps(data, sort_keys=True, indent=2)
